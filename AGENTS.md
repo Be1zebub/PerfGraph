@@ -15,7 +15,7 @@ collect → normalize → extract → analyze → report
 ### Quick entry point
 
 ```bash
-npx webtrace run --url https://example.com --pretty
+npx @gmod.one/webtrace run --url https://example.com --pretty
 ```
 
 This runs the full pipeline. The output is a `report.json` with:

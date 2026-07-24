@@ -1,16 +1,42 @@
 {
-  "name": "webtrace",
+  "name": "@gmod.one/webtrace",
   "version": "0.1.0",
   "type": "module",
-  "description": "Web performance trace collector — CDP-based data ingestion for performance diagnostics",
+  "description": "CDP-powered perf CLI — causal degradation graphs, not just Lighthouse scores",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "dist/",
     "README.md",
-    "package.json"
+    "LICENSE"
   ],
   "bin": {
-    "webtrace": "./dist/index.js"
+    "webtrace": "dist/index.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Be1zebub/WebTracer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Be1zebub/WebTracer/issues"
+  },
+  "homepage": "https://github.com/Be1zebub/WebTracer#readme",
+  "keywords": [
+    "web-performance",
+    "lighthouse",
+    "cdp",
+    "core-web-vitals",
+    "lcp",
+    "cls",
+    "mcp",
+    "performance",
+    "profiler",
+    "diagnostics"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",

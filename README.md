@@ -1,11 +1,14 @@
 # WebTrace
 
+[![npm][badge-version]][npm] [![license][badge-license]][license]
+[![npm downloads][badge-downloads]][npm] [![github stars][badge-stars]][repo]
+
 > Real browser metrics → causal degradation graph → actionable report. Built for AI agents, useful for humans.
 
 WebTrace launches a headless Chromium browser, captures performance data via Chrome DevTools Protocol, runs it through a 5-stage analysis pipeline, and spits out a structured JSON report with issues sorted by severity, causal chains, and prioritized fixes.
 
 ```bash
-npx webtrace run --url https://example.com --pretty
+npx @gmod.one/webtrace run --url https://example.com --pretty
 ```
 
 ## Why
@@ -33,13 +36,13 @@ collect → normalize → extract → analyze → report
 ## Install
 
 ```bash
-npm install -g webtrace
+npm install -g @gmod.one/webtrace
 ```
 
 Or skip the install:
 
 ```bash
-npx webtrace --help
+npx @gmod.one/webtrace --help
 ```
 
 **Requirements:** Node.js ≥ 22, Chromium (Playwright installs it automatically on first run).
@@ -267,3 +270,11 @@ npm run dev            # tsx watch — no build step
 ## License
 
 MIT
+
+[badge-version]: https://img.shields.io/npm/v/@gmod.one/webtrace.svg
+[badge-license]: https://img.shields.io/npm/l/@gmod.one/webtrace.svg
+[badge-downloads]: https://img.shields.io/npm/dm/@gmod.one/webtrace.svg
+[badge-stars]: https://img.shields.io/github/stars/Be1zebub/WebTracer.svg?style=flat&logo=github
+[npm]: https://www.npmjs.com/package/@gmod.one/webtrace
+[license]: https://github.com/Be1zebub/WebTracer/blob/master/LICENSE
+[repo]: https://github.com/Be1zebub/WebTracer
