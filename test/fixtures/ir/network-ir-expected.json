@@ -1,0 +1,93 @@
+{
+  "requests": [
+    {
+      "url": "https://example.com/",
+      "method": "GET",
+      "resourceType": "Document",
+      "statusCode": 200,
+      "startTime": 12345678,
+      "endTime": 12345688.5,
+      "duration": 10.5,
+      "bytes": 1234,
+      "priority": "VeryHigh",
+      "initiator": "other",
+      "failed": false,
+      "timing": {
+        "dns": 0.7,
+        "connect": 1.3,
+        "ssl": 0.8,
+        "wait": 0.2,
+        "receive": 7.7
+      }
+    },
+    {
+      "url": "https://example.com/style.css",
+      "method": "GET",
+      "resourceType": "Stylesheet",
+      "statusCode": 200,
+      "startTime": 12345700,
+      "endTime": 12345705.2,
+      "duration": 5.2,
+      "bytes": 567,
+      "priority": "Medium",
+      "initiator": "parser",
+      "initiatorUrl": "https://example.com/",
+      "failed": false,
+      "timing": {
+        "wait": 0.05,
+        "receive": 5.05
+      }
+    },
+    {
+      "url": "https://example.com/app.js",
+      "method": "GET",
+      "resourceType": "Script",
+      "statusCode": 200,
+      "startTime": 12345720,
+      "endTime": 12345728.1,
+      "duration": 8.1,
+      "bytes": 890,
+      "priority": "High",
+      "initiator": "parser",
+      "initiatorUrl": "https://example.com/",
+      "failed": false,
+      "timing": {
+        "wait": 0.02,
+        "receive": 7.98
+      }
+    }
+  ],
+  "summary": {
+    "totalRequests": 3,
+    "totalBytes": 2691,
+    "byType": {
+      "Document": 1,
+      "Stylesheet": 1,
+      "Script": 1
+    },
+    "byPriority": {
+      "VeryHigh": 1,
+      "Medium": 1,
+      "High": 1
+    },
+    "criticalPath": {
+      "tree": {
+        "url": "https://example.com/",
+        "durationMs": 10.5,
+        "children": [
+          { "url": "https://example.com/style.css", "durationMs": 5.2 },
+          { "url": "https://example.com/app.js", "durationMs": 8.1 }
+        ]
+      },
+      "depth": 2,
+      "urlsOnLongestPath": [
+        "https://example.com/",
+        "https://example.com/style.css"
+      ]
+    },
+    "longestChain": {
+      "url": "https://example.com/",
+      "length": 10.5
+    }
+  }
+}

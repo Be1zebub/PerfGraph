@@ -1,0 +1,52 @@
+{
+  "entries": [
+    {
+      "timestamp": 1700000000000,
+      "type": "log",
+      "args": ["Page loaded", { "url": "https://example.com/" }]
+    },
+    {
+      "timestamp": 1700000000100,
+      "type": "info",
+      "args": ["Session started: user_abc123"]
+    },
+    {
+      "timestamp": 1700000000200,
+      "type": "warn",
+      "args": ["Deprecated API detected", "fetchUserData"]
+    },
+    {
+      "timestamp": 1700000000300,
+      "type": "error",
+      "args": ["Network request failed", { "status": 500, "url": "/api/data" }],
+      "stackTrace": [
+        { "url": "https://example.com/app.js", "lineNumber": 42, "columnNumber": 15, "functionName": "makeRequest" },
+        { "url": "https://example.com/app.js", "lineNumber": 18, "columnNumber": 5, "functionName": "initApp" }
+      ]
+    },
+    {
+      "timestamp": 1700000000400,
+      "type": "debug",
+      "args": ["render: component=Header, duration=12ms"]
+    },
+    {
+      "timestamp": 1700000000500,
+      "type": "log",
+      "args": ["User interaction: click button#submit"]
+    },
+    {
+      "timestamp": 1700000000600,
+      "type": "info",
+      "args": ["Performance metrics collected", { "fcp": 1200, "lcp": 2400 }]
+    }
+  ],
+  "counts": {
+    "log": 2,
+    "warn": 1,
+    "error": 1,
+    "info": 2,
+    "debug": 1,
+    "other": 0
+  },
+  "warnings": []
+}

@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Source maps
+*.js.map
+*.d.ts.map
+
+# Test output & fixtures
+coverage/
+test-output/
+test-out/
+test-results/
+test/fixtures/generated/
+
+# Collected data & reports
+webtrace-output/
+
+# Packed artifacts
+*.tgz
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project-level planning & internal
+.planning/
+.docs/
+.codegraph/
+.opencode/

@@ -1,0 +1,34 @@
+{
+  "stats": {
+    "totalNodes": 312,
+    "elementCount": 99,
+    "maxDepth": 12,
+    "maxChildren": 28
+  },
+  "tagDistribution": [
+    { "tag": "html", "count": 1 },
+    { "tag": "head", "count": 1 },
+    { "tag": "body", "count": 1 },
+    { "tag": "meta", "count": 3 },
+    { "tag": "title", "count": 1 },
+    { "tag": "link", "count": 4 },
+    { "tag": "script", "count": 6 },
+    { "tag": "div", "count": 28 },
+    { "tag": "span", "count": 15 },
+    { "tag": "p", "count": 8 },
+    { "tag": "a", "count": 7 },
+    { "tag": "img", "count": 5 },
+    { "tag": "h1", "count": 1 },
+    { "tag": "h2", "count": 2 },
+    { "tag": "h3", "count": 3 },
+    { "tag": "ul", "count": 2 },
+    { "tag": "li", "count": 8 },
+    { "tag": "nav", "count": 1 },
+    { "tag": "header", "count": 1 },
+    { "tag": "footer", "count": 1 }
+  ],
+  "layoutShiftCandidates": {
+    "highComplexitySubtrees": 0,
+    "deepNesting": 0
+  }
+}

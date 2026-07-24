@@ -1,0 +1,91 @@
+{
+  "lhr": {
+    "lighthouseVersion": "11.0.0",
+    "requestedUrl": "https://example.com/",
+    "finalUrl": "https://example.com/",
+    "fetchTime": "2025-01-15T10:30:00.000Z",
+    "userAgent": "Mozilla/5.0 Lighthouse",
+    "categories": {
+      "performance": {
+        "id": "performance",
+        "title": "Performance",
+        "score": 0.85
+      },
+      "accessibility": {
+        "id": "accessibility",
+        "title": "Accessibility",
+        "score": 0.92
+      },
+      "best-practices": {
+        "id": "best-practices",
+        "title": "Best Practices",
+        "score": 0.88
+      },
+      "seo": {
+        "id": "seo",
+        "title": "SEO",
+        "score": 0.95
+      }
+    },
+    "audits": {
+      "first-contentful-paint": {
+        "id": "first-contentful-paint",
+        "title": "First Contentful Paint",
+        "score": 0.95,
+        "numericValue": 1200
+      },
+      "largest-contentful-paint": {
+        "id": "largest-contentful-paint",
+        "title": "Largest Contentful Paint",
+        "score": 0.82,
+        "numericValue": 2400
+      },
+      "cumulative-layout-shift": {
+        "id": "cumulative-layout-shift",
+        "title": "Cumulative Layout Shift",
+        "score": 0.99,
+        "numericValue": 0.05
+      },
+      "total-blocking-time": {
+        "id": "total-blocking-time",
+        "title": "Total Blocking Time",
+        "score": 0.9,
+        "numericValue": 150
+      },
+      "speed-index": {
+        "id": "speed-index",
+        "title": "Speed Index",
+        "score": 0.88,
+        "numericValue": 1800
+      },
+      "render-blocking-resources": {
+        "id": "render-blocking-resources",
+        "title": "Render blocking resources",
+        "score": 0.45,
+        "numericValue": 870,
+        "details": {
+          "type": "table",
+          "items": [
+            {
+              "url": "https://example.com/style.css",
+              "totalBytes": 18000,
+              "wastedMs": 306,
+              "resourceType": "Stylesheet"
+            },
+            {
+              "url": "https://example.com/app.js",
+              "totalBytes": 45000,
+              "wastedMs": 560,
+              "resourceType": "Script"
+            }
+          ]
+        }
+      }
+    },
+    "configSettings": {
+      "onlyCategories": ["performance", "accessibility", "best-practices", "seo"]
+    }
+  },
+  "categories": ["performance", "accessibility", "best-practices", "seo"],
+  "warnings": []
+}

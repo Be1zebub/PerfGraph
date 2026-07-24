@@ -1,0 +1,31 @@
+{
+  "stats": {
+    "totalNodes": 312,
+    "elementCount": 99,
+    "maxDepth": 12,
+    "textContentLength": 8450
+  },
+  "elementDistribution": {
+    "html": 1,
+    "head": 1,
+    "body": 1,
+    "meta": 3,
+    "title": 1,
+    "link": 4,
+    "script": 6,
+    "div": 28,
+    "span": 15,
+    "p": 8,
+    "a": 7,
+    "img": 5,
+    "h1": 1,
+    "h2": 2,
+    "h3": 3,
+    "ul": 2,
+    "li": 8,
+    "nav": 1,
+    "header": 1,
+    "footer": 1
+  },
+  "warnings": []
+}

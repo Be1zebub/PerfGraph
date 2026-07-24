@@ -1,0 +1,248 @@
+{
+  "meta": {
+    "url": "https://example.com",
+    "fetchedAt": "2025-06-09T18:42:00.000Z",
+    "navigationStart": 0,
+    "irVersion": "1.0.0"
+  },
+  "performance": {
+    "navigation": {
+      "url": "https://example.com",
+      "navigationStart": 0,
+      "domContentLoaded": 1250,
+      "domContentLoadedEventEnd": 1320,
+      "loadEventStart": 2800,
+      "loadEventEnd": 3100,
+      "domInteractive": 1100
+    },
+    "coreWebVitals": {
+      "fcp": 1100,
+      "lcp": 2800,
+      "cls": 0.05,
+      "tbt": 520
+    },
+    "traceSummary": {
+      "totalDuration": 5000,
+      "eventCount": 320,
+      "categories": {
+        "loading": 45,
+        "script": 120,
+        "render": 80,
+        "paint": 25,
+        "other": 50
+      },
+      "threadActivity": {
+        "totalMs": 3200,
+        "byCategory": {
+          "loading": 400,
+          "script": 1800,
+          "render": 600,
+          "paint": 200,
+          "other": 200
+        }
+      }
+    },
+    "mainThreadBusyness": 0.64
+  },
+  "network": {
+    "requests": [
+      {
+        "url": "https://example.com/",
+        "method": "GET",
+        "resourceType": "Document",
+        "statusCode": 200,
+        "startTime": 0,
+        "endTime": 320,
+        "duration": 320,
+        "bytes": 8500,
+        "priority": "VeryHigh",
+        "initiator": "",
+        "failed": false,
+        "timing": { "dns": 15, "connect": 30, "ssl": 25, "wait": 180, "receive": 70 }
+      },
+      {
+        "url": "https://example.com/style.css",
+        "method": "GET",
+        "resourceType": "Stylesheet",
+        "statusCode": 200,
+        "startTime": 180,
+        "endTime": 380,
+        "duration": 200,
+        "bytes": 18000,
+        "priority": "VeryHigh",
+        "initiator": "",
+        "failed": false,
+        "timing": { "dns": 0, "connect": 0, "ssl": 0, "wait": 30, "receive": 170 }
+      },
+      {
+        "url": "https://example.com/app.js",
+        "method": "GET",
+        "resourceType": "Script",
+        "statusCode": 200,
+        "startTime": 200,
+        "endTime": 900,
+        "duration": 700,
+        "bytes": 45000,
+        "priority": "VeryHigh",
+        "initiator": "",
+        "failed": false,
+        "timing": { "dns": 0, "connect": 0, "ssl": 0, "wait": 40, "receive": 660 }
+      },
+      {
+        "url": "https://example.com/hero.png",
+        "method": "GET",
+        "resourceType": "Image",
+        "statusCode": 200,
+        "startTime": 350,
+        "endTime": 2350,
+        "duration": 2000,
+        "bytes": 120000,
+        "priority": "High",
+        "initiator": "",
+        "failed": false,
+        "timing": { "dns": 5, "connect": 15, "ssl": 0, "wait": 80, "receive": 1900 }
+      },
+      {
+        "url": "https://www.google-analytics.com/ga.js",
+        "method": "GET",
+        "resourceType": "Script",
+        "statusCode": 200,
+        "startTime": 500,
+        "endTime": 1100,
+        "duration": 600,
+        "bytes": 25000,
+        "priority": "High",
+        "initiator": "",
+        "failed": false,
+        "timing": { "dns": 10, "connect": 20, "ssl": 15, "wait": 55, "receive": 500 }
+      },
+      {
+        "url": "https://cdn.example.com/font.woff2",
+        "method": "GET",
+        "resourceType": "Font",
+        "statusCode": 200,
+        "startTime": 600,
+        "endTime": 1000,
+        "duration": 400,
+        "bytes": 35000,
+        "priority": "High",
+        "initiator": "",
+        "failed": false,
+        "timing": { "dns": 5, "connect": 10, "ssl": 10, "wait": 75, "receive": 300 }
+      },
+      {
+        "url": "https://connect.facebook.net/en_US/sdk.js",
+        "method": "GET",
+        "resourceType": "Script",
+        "statusCode": 200,
+        "startTime": 700,
+        "endTime": 1300,
+        "duration": 600,
+        "bytes": 38000,
+        "priority": "Low",
+        "initiator": "",
+        "failed": false,
+        "timing": { "dns": 10, "connect": 25, "ssl": 20, "wait": 45, "receive": 500 }
+      }
+    ],
+    "summary": {
+      "totalRequests": 7,
+      "totalBytes": 289500,
+      "byType": { "Document": 1, "Stylesheet": 1, "Script": 3, "Image": 1, "Font": 1 },
+      "byPriority": { "VeryHigh": 3, "High": 2, "Low": 2 },
+      "criticalPath": {
+        "tree": {
+          "url": "https://example.com/",
+          "durationMs": 320,
+          "children": [
+            { "url": "https://example.com/style.css", "durationMs": 200 },
+            { "url": "https://example.com/app.js", "durationMs": 700 },
+            { "url": "https://example.com/hero.png", "durationMs": 2000 },
+            { "url": "https://www.google-analytics.com/ga.js", "durationMs": 600 },
+            { "url": "https://cdn.example.com/font.woff2", "durationMs": 400 },
+            { "url": "https://connect.facebook.net/en_US/sdk.js", "durationMs": 600 }
+          ]
+        },
+        "depth": 2,
+        "urlsOnLongestPath": [
+          "https://example.com/",
+          "https://example.com/style.css"
+        ]
+      },
+      "longestChain": { "url": "https://example.com/app.js", "length": 3 }
+    }
+  },
+  "runtime": {
+    "executionContexts": [
+      { "id": 1, "origin": "https://example.com", "name": "main" },
+      { "id": 2, "origin": "https://www.google-analytics.com" },
+      { "id": 3, "origin": "https://connect.facebook.net" }
+    ],
+    "hydrationCost": { "bootupTime": 720, "evaluatedScripts": 8 },
+    "eventLoopStats": { "totalBlockingDuration": 520, "longTasks": 6, "maxBlockingDuration": 180 }
+  },
+  "dom": {
+    "stats": { "totalNodes": 350, "elementCount": 180, "maxDepth": 14, "maxChildren": 9 },
+    "tagDistribution": [
+      { "tag": "div", "count": 45 },
+      { "tag": "a", "count": 20 },
+      { "tag": "span", "count": 18 },
+      { "tag": "img", "count": 12 },
+      { "tag": "script", "count": 8 },
+      { "tag": "link", "count": 5 },
+      { "tag": "meta", "count": 4 },
+      { "tag": "p", "count": 15 },
+      { "tag": "h1", "count": 3 },
+      { "tag": "h2", "count": 5 },
+      { "tag": "ul", "count": 4 },
+      { "tag": "li", "count": 12 },
+      { "tag": "nav", "count": 2 },
+      { "tag": "header", "count": 1 },
+      { "tag": "footer", "count": 1 },
+      { "tag": "section", "count": 3 },
+      { "tag": "iframe", "count": 2 },
+      { "tag": "form", "count": 2 },
+      { "tag": "input", "count": 3 },
+      { "tag": "button", "count": 4 }
+    ],
+    "layoutShiftCandidates": { "highComplexitySubtrees": 3, "deepNesting": 1 }
+  },
+  "lighthouse": {
+    "categories": {
+      "performance": { "title": "Performance", "score": 0.61 },
+      "accessibility": { "title": "Accessibility", "score": 0.88 },
+      "best-practices": { "title": "Best Practices", "score": 0.92 },
+      "seo": { "title": "SEO", "score": 0.95 }
+    },
+    "failedAudits": [
+      { "id": "server-response-time", "title": "Server response time", "description": "", "score": 0.3, "numericValue": 320 },
+      { "id": "render-blocking-resources", "title": "Render blocking resources", "description": "", "score": 0.45, "numericValue": 870 },
+      { "id": "uses-responsive-images", "title": "Use responsive images", "description": "", "score": 0.2, "numericValue": 550 },
+      { "id": "unminified-javascript", "title": "Minify JavaScript", "description": "", "score": 0.7, "numericValue": 120 }
+    ],
+    "scores": {
+      "performance": 0.61,
+      "accessibility": 0.88,
+      "bestPractices": 0.92,
+      "seo": 0.95
+    },
+    "lcpNumericValue": 2800,
+    "lcpElementSelector": "img.hero",
+    "lcpElementSnippet": "<img class=\"hero\" src=\"hero.png\" alt=\"Hero\">",
+    "lcpElementNodeLabel": "img.hero",
+    "renderBlockingResources": [
+      {
+        "url": "https://example.com/style.css",
+        "totalBytes": 18000,
+        "wastedMs": 306,
+        "resourceType": "Stylesheet"
+      },
+      {
+        "url": "https://example.com/app.js",
+        "totalBytes": 45000,
+        "wastedMs": 560,
+        "resourceType": "Script"
+      }
+    ]
+  }
+}

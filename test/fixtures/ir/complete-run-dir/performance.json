@@ -1,0 +1,70 @@
+{
+  "metrics": [
+    {
+      "name": "Timestamp",
+      "value": 12345678.9
+    },
+    {
+      "name": "Documents",
+      "value": 3
+    },
+    {
+      "name": "Frames",
+      "value": 1
+    },
+    {
+      "name": "JSEventListeners",
+      "value": 12
+    },
+    {
+      "name": "Nodes",
+      "value": 245
+    },
+    {
+      "name": "LayoutCount",
+      "value": 2
+    },
+    {
+      "name": "RecalcStyleCount",
+      "value": 3
+    },
+    {
+      "name": "LayoutDuration",
+      "value": 15.5
+    },
+    {
+      "name": "RecalcStyleDuration",
+      "value": 8.2
+    },
+    {
+      "name": "ScriptDuration",
+      "value": 42.1
+    },
+    {
+      "name": "TaskDuration",
+      "value": 120.3
+    },
+    {
+      "name": "JSHeapUsedSize",
+      "value": 4194304
+    },
+    {
+      "name": "JSHeapTotalSize",
+      "value": 8388608
+    },
+    {
+      "name": "FirstMeaningfulPaint",
+      "value": 850.0
+    },
+    {
+      "name": "DomContentLoaded",
+      "value": 320.0
+    },
+    {
+      "name": "NavigationStart",
+      "value": 1000.0
+    }
+  ],
+  "timestamp": 1700000007000,
+  "warnings": []
+}

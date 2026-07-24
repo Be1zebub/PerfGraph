@@ -1,0 +1,88 @@
+{
+  "events": [
+    {
+      "cat": "blink.user_timing",
+      "name": "navigationStart",
+      "ph": "R",
+      "ts": 1000000,
+      "pid": 1,
+      "tid": 1,
+      "args": {
+        "frame": "ABCDEF123"
+      }
+    },
+    {
+      "cat": "loading",
+      "name": "ParseHTML",
+      "ph": "X",
+      "ts": 1002000,
+      "dur": 3000,
+      "pid": 1,
+      "tid": 1,
+      "args": {
+        "length": 1024
+      }
+    },
+    {
+      "cat": "devtools.timeline",
+      "name": "firstPaint",
+      "ph": "I",
+      "ts": 3000000,
+      "pid": 1,
+      "tid": 2,
+      "args": {}
+    },
+    {
+      "cat": "blink.user_timing",
+      "name": "firstContentfulPaint",
+      "ph": "R",
+      "ts": 3500000,
+      "pid": 1,
+      "tid": 2,
+      "args": {
+        "frame": "ABCDEF123"
+      }
+    },
+    {
+      "cat": "loading",
+      "name": "FinishLoad",
+      "ph": "I",
+      "ts": 5000000,
+      "pid": 1,
+      "tid": 1,
+      "args": {}
+    },
+    {
+      "cat": "devtools.timeline",
+      "name": "LargestContentfulPaint",
+      "ph": "I",
+      "ts": 6000000,
+      "pid": 1,
+      "tid": 2,
+      "args": {
+        "data": {
+          "size": 42000,
+          "candidateIndex": 1
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "categories": [
+      "devtools.timeline",
+      "disabled-by-default-devtools.timeline",
+      "disabled-by-default-devtools.timeline.frame",
+      "blink.user_timing",
+      "loading",
+      "blink",
+      "cc",
+      "gpu",
+      "v8",
+      "disabled-by-default-v8.cpu_profiler",
+      "disabled-by-default-v8.compile"
+    ],
+    "totalEvents": 6,
+    "dataCollectedCount": 2
+  },
+  "warnings": []
+}

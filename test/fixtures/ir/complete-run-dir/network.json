@@ -1,0 +1,189 @@
+{
+  "requests": [
+    {
+      "requestId": "A1B2C3D4",
+      "url": "https://example.com/",
+      "method": "GET",
+      "type": "Document",
+      "request": {
+        "headers": {
+          "Accept": "text/html,application/xhtml+xml",
+          "User-Agent": "Mozilla/5.0 Test"
+        },
+        "initialPriority": "VeryHigh",
+        "referrerPolicy": "strict-origin-when-cross-origin"
+      },
+      "response": {
+        "status": 200,
+        "statusText": "OK",
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Length": "1234"
+        },
+        "mimeType": "text/html",
+        "timing": {
+          "requestTime": 12345.678,
+          "proxyStart": -1,
+          "proxyEnd": -1,
+          "dnsStart": 0.5,
+          "dnsEnd": 1.2,
+          "connectStart": 1.2,
+          "connectEnd": 2.5,
+          "sslStart": 1.5,
+          "sslEnd": 2.3,
+          "workerStart": -1,
+          "workerReady": -1,
+          "workerFetchStart": -1,
+          "workerRespondWithSettled": -1,
+          "sendStart": 2.6,
+          "sendEnd": 2.8,
+          "pushStart": 0,
+          "pushEnd": 0,
+          "receiveHeadersEnd": 10.5
+        },
+        "fromDiskCache": false,
+        "fromServiceWorker": false,
+        "encodedDataLength": 1234,
+        "protocol": "h2",
+        "remoteIPAddress": "93.184.216.34",
+        "remotePort": 443
+      },
+      "initiator": {
+        "type": "other"
+      },
+      "timestamp": 1000.5,
+      "wallTime": 1700000000
+    },
+    {
+      "requestId": "E5F6G7H8",
+      "url": "https://example.com/style.css",
+      "method": "GET",
+      "type": "Stylesheet",
+      "request": {
+        "headers": {
+          "Accept": "text/css,*/*",
+          "User-Agent": "Mozilla/5.0 Test"
+        },
+        "initialPriority": "Medium",
+        "referrerPolicy": "strict-origin-when-cross-origin"
+      },
+      "response": {
+        "status": 200,
+        "statusText": "OK",
+        "headers": {
+          "Content-Type": "text/css; charset=utf-8",
+          "Content-Length": "567"
+        },
+        "mimeType": "text/css",
+        "timing": {
+          "requestTime": 12345.7,
+          "proxyStart": -1,
+          "proxyEnd": -1,
+          "dnsStart": -1,
+          "dnsEnd": -1,
+          "connectStart": -1,
+          "connectEnd": -1,
+          "sslStart": -1,
+          "sslEnd": -1,
+          "workerStart": -1,
+          "workerReady": -1,
+          "workerFetchStart": -1,
+          "workerRespondWithSettled": -1,
+          "sendStart": 0.1,
+          "sendEnd": 0.15,
+          "pushStart": 0,
+          "pushEnd": 0,
+          "receiveHeadersEnd": 5.2
+        },
+        "fromDiskCache": false,
+        "fromServiceWorker": false,
+        "encodedDataLength": 567,
+        "protocol": "h2",
+        "remoteIPAddress": "93.184.216.34",
+        "remotePort": 443
+      },
+      "initiator": {
+        "type": "parser",
+        "url": "https://example.com/",
+        "lineNumber": 5
+      },
+      "timestamp": 1005.7,
+      "wallTime": 1700000005
+    },
+    {
+      "requestId": "I9J0K1L2",
+      "url": "https://example.com/app.js",
+      "method": "GET",
+      "type": "Script",
+      "request": {
+        "headers": {
+          "Accept": "*/*",
+          "User-Agent": "Mozilla/5.0 Test"
+        },
+        "initialPriority": "High",
+        "referrerPolicy": "strict-origin-when-cross-origin"
+      },
+      "response": {
+        "status": 200,
+        "statusText": "OK",
+        "headers": {
+          "Content-Type": "application/javascript",
+          "Content-Length": "890"
+        },
+        "mimeType": "application/javascript",
+        "timing": {
+          "requestTime": 12345.72,
+          "proxyStart": -1,
+          "proxyEnd": -1,
+          "dnsStart": -1,
+          "dnsEnd": -1,
+          "connectStart": -1,
+          "connectEnd": -1,
+          "sslStart": -1,
+          "sslEnd": -1,
+          "workerStart": -1,
+          "workerReady": -1,
+          "workerFetchStart": -1,
+          "workerRespondWithSettled": -1,
+          "sendStart": 0.1,
+          "sendEnd": 0.12,
+          "pushStart": 0,
+          "pushEnd": 0,
+          "receiveHeadersEnd": 8.1
+        },
+        "fromDiskCache": false,
+        "fromServiceWorker": false,
+        "encodedDataLength": 890,
+        "protocol": "h2",
+        "remoteIPAddress": "93.184.216.34",
+        "remotePort": 443
+      },
+      "initiator": {
+        "type": "parser",
+        "url": "https://example.com/",
+        "lineNumber": 10,
+        "stack": {
+          "callFrames": [
+            {
+              "functionName": "",
+              "scriptId": "1",
+              "url": "https://example.com/",
+              "lineNumber": 10,
+              "columnNumber": 5
+            }
+          ]
+        }
+      },
+      "timestamp": 1007.0,
+      "wallTime": 1700000006
+    }
+  ],
+  "metadata": {
+    "totalRequests": 3,
+    "totalFailed": 0,
+    "totalBytes": 2691,
+    "startTime": 1000.5,
+    "endTime": 1007.0
+  },
+  "warnings": []
+}

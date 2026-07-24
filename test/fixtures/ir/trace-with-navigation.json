@@ -1,0 +1,103 @@
+{
+  "events": [
+    {
+      "cat": "blink.user_timing",
+      "name": "navigationStart",
+      "ph": "R",
+      "ts": 1000000,
+      "pid": 1,
+      "tid": 1,
+      "args": {
+        "frame": "ABCDEF123"
+      }
+    },
+    {
+      "cat": "blink.user_timing",
+      "name": "MarkDOMContent",
+      "ph": "R",
+      "ts": 1800000,
+      "pid": 1,
+      "tid": 1,
+      "args": {}
+    },
+    {
+      "cat": "blink.user_timing",
+      "name": "firstContentfulPaint",
+      "ph": "R",
+      "ts": 1800000,
+      "pid": 1,
+      "tid": 1,
+      "args": {
+        "frame": "ABCDEF123"
+      }
+    },
+    {
+      "cat": "loading",
+      "name": "ParseHTML",
+      "ph": "X",
+      "ts": 1900000,
+      "dur": 100000,
+      "pid": 1,
+      "tid": 1,
+      "args": {
+        "length": 2048
+      }
+    },
+    {
+      "cat": "devtools.timeline",
+      "name": "LayoutShift",
+      "ph": "I",
+      "ts": 2000000,
+      "pid": 1,
+      "tid": 1,
+      "args": {
+        "data": {
+          "cumulative_score": 0.05
+        }
+      }
+    },
+    {
+      "cat": "devtools.timeline",
+      "name": "LongTask",
+      "ph": "X",
+      "ts": 2050000,
+      "dur": 95000,
+      "pid": 1,
+      "tid": 1,
+      "args": {}
+    },
+    {
+      "cat": "blink.user_timing",
+      "name": "MarkLoad",
+      "ph": "R",
+      "ts": 2200000,
+      "pid": 1,
+      "tid": 2,
+      "args": {}
+    },
+    {
+      "cat": "devtools.timeline",
+      "name": "LargestContentfulPaint::Candidate",
+      "ph": "I",
+      "ts": 2200000,
+      "pid": 1,
+      "tid": 2,
+      "args": {
+        "data": {
+          "size": 42000,
+          "candidateIndex": 1
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "categories": [
+      "blink.user_timing",
+      "loading",
+      "devtools.timeline"
+    ],
+    "totalEvents": 8,
+    "dataCollectedCount": 2
+  },
+  "warnings": []
+}

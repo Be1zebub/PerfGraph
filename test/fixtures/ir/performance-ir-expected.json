@@ -1,0 +1,34 @@
+{
+  "navigation": {
+    "url": "",
+    "navigationStart": 0,
+    "domContentLoaded": 800,
+    "domContentLoadedEventEnd": 800,
+    "loadEventStart": 1200,
+    "loadEventEnd": 1200,
+    "domInteractive": 800
+  },
+  "coreWebVitals": {
+    "fcp": 800,
+    "lcp": 1200,
+    "cls": 0.05,
+    "tbt": 45
+  },
+  "traceSummary": {
+    "totalDuration": 1200,
+    "eventCount": 8,
+    "categories": {
+      "blink.user_timing": 4,
+      "loading": 1,
+      "devtools.timeline": 3
+    },
+    "threadActivity": {
+      "totalMs": 195,
+      "byCategory": {
+        "loading": 100,
+        "devtools.timeline": 95
+      }
+    }
+  },
+  "mainThreadBusyness": 0.1625
+}

@@ -1,0 +1,19 @@
+{
+  "jsHeapStats": {
+    "totalJSHeapSize": 4194304,
+    "usedJSHeapSize": 2516582
+  },
+  "executionContexts": [
+    { "id": 1, "origin": "https://example.com", "name": "example.com" },
+    { "id": 2, "origin": "https://fonts.googleapis.com", "name": "fonts.googleapis.com" }
+  ],
+  "eventLoopStats": {
+    "totalBlockingDuration": 600,
+    "longTasks": 6,
+    "maxBlockingDuration": 100
+  },
+  "hydrationCost": {
+    "bootupTime": 100,
+    "evaluatedScripts": 1
+  }
+}
