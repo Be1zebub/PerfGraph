@@ -11,7 +11,7 @@ PerfGraph launches a headless Chromium browser, captures performance data via Ch
 npx perfgraph run --url https://example.com --pretty
 ```
 
-PerfGraph — not a symptom list, a diagnosis.
+PerfGraph — not a symptom list, a diagnosis.  
 Root cause → impact → fix, in one graph.
 
 ## Why
