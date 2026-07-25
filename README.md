@@ -1,19 +1,19 @@
-# WebTrace
+# PerfGraph
 
 [![npm][badge-version]][npm] [![license][badge-license]][license]
 [![npm downloads][badge-downloads]][npm] [![github stars][badge-stars]][repo]
 
 > Real browser metrics → causal degradation graph → actionable report. Built for AI agents, useful for humans.
 
-WebTrace launches a headless Chromium browser, captures performance data via Chrome DevTools Protocol, runs it through a 5-stage analysis pipeline, and spits out a structured JSON report with issues sorted by severity, causal chains, and prioritized fixes.
+PerfGraph launches a headless Chromium browser, captures performance data via Chrome DevTools Protocol, runs it through a 5-stage analysis pipeline, and spits out a structured JSON report with issues sorted by severity, causal chains, and prioritized fixes.
 
 ```bash
-npx @gmod.one/webtrace run --url https://example.com --pretty
+npx perfgraph run --url https://example.com --pretty
 ```
 
 ## Why
 
-Lighthouse gives you a score. WebTrace tells you _why_ it's bad and what to fix first.
+Lighthouse gives you a score. PerfGraph tells you _why_ it's bad and what to fix first.
 
 Instead of digging through a 10k-line trace.json or a wall of Lighthouse audits, you get a focused report with root causes linked to impact. The output is designed to be read by AI agents (or you) without a decoder ring.
 
@@ -36,13 +36,13 @@ collect → normalize → extract → analyze → report
 ## Install
 
 ```bash
-npm install -g @gmod.one/webtrace
+npm install -g perfgraph
 ```
 
 Or skip the install:
 
 ```bash
-npx @gmod.one/webtrace --help
+npx perfgraph --help
 ```
 
 **Requirements:** Node.js ≥ 22, Chromium (Playwright installs it automatically on first run).
@@ -52,30 +52,30 @@ npx @gmod.one/webtrace --help
 Full pipeline, one command:
 
 ```bash
-webtrace run --url https://example.com --pretty
+perfgraph run --url https://example.com --pretty
 ```
 
 Step by step:
 
 ```bash
 # 1. Collect data
-webtrace collect --url https://example.com --output ./results
+perfgraph collect --url https://example.com --output ./results
 
 # 2. Normalize → Extract → Report
-webtrace normalize ./results/webtrace_example_20260609_120000 --output ir.json
-webtrace extract ir.json --output features.json
-webtrace report features.json --output report.json --pretty
+perfgraph normalize ./results/perfgraph_example_20260609_120000 --output ir.json
+perfgraph extract ir.json --output features.json
+perfgraph report features.json --output report.json --pretty
 ```
 
 ## Commands
 
-### `webtrace run`
+### `perfgraph run`
 
 Full pipeline in one shot.
 
 ```
 --url <url>           Required. Target URL to analyze.
---output <dir>        Output directory (default: ./webtrace-output).
+--output <dir>            Output directory (default: ./perfgraph-output).
 --runs <n>            Number of collection runs (default: 1).
 --pretty              Pretty-print the final report JSON.
 --device <name>       Mobile emulation (e.g. "iPhone 13").
@@ -85,11 +85,11 @@ Full pipeline in one shot.
 --no-dom              Skip DOM snapshot.
 ```
 
-### `webtrace collect`
+### `perfgraph collect`
 
 Captures performance data from a URL. See `run` options — same flags apply.
 
-### `webtrace normalize <input>`
+### `perfgraph normalize <input>`
 
 Converts raw collected data into a validated IRBundle. Accepts a run directory or a parent directory (auto-detects latest run).
 
@@ -98,7 +98,7 @@ Converts raw collected data into a validated IRBundle. Accepts a run directory o
 --pretty              Pretty-print JSON.
 ```
 
-### `webtrace extract <ir-file>`
+### `perfgraph extract <ir-file>`
 
 Computes diagnostic features from a normalized IR bundle.
 
@@ -108,7 +108,7 @@ Computes diagnostic features from a normalized IR bundle.
 --pretty              Pretty-print JSON.
 ```
 
-### `webtrace analyze <features-file>`
+### `perfgraph analyze <features-file>`
 
 Applies causal rules and builds a degradation graph.
 
@@ -118,7 +118,7 @@ Applies causal rules and builds a degradation graph.
 --pretty              Pretty-print JSON.
 ```
 
-### `webtrace report <features-file>`
+### `perfgraph report <features-file>`
 
 Generates the final performance report. Accepts a FeatureSet JSON (from `extract`) — runs the causal engine internally, no need to call `analyze` separately.
 
@@ -128,7 +128,7 @@ Generates the final performance report. Accepts a FeatureSet JSON (from `extract
 --pretty              Pretty-print JSON.
 ```
 
-### `webtrace mcp`
+### `perfgraph mcp`
 
 Starts an MCP stdio server for AI agent integration. No flags. See [AGENTS.md](AGENTS.md) for details.
 
@@ -138,68 +138,68 @@ The report is a single JSON file. Key sections:
 
 ```jsonc
 {
- "meta": {
-  "url": "https://example.com",
-  "analyzedAt": "2026-06-09T19:15:19.000Z",
-  "reportVersion": "1.0.0",
-  "featureCount": 7,
-  "graphNodeCount": 24,
-  "graphEdgeCount": 31,
-  "ruleCount": 32,
- },
- "summary": {
-  "score": "moderate", // "good" | "moderate" | "poor"
-  "criticalIssues": 2,
-  "warnings": 5,
-  "infos": 3,
-  "topIssues": [
-   {
-    "id": "js-long-task",
-    "label": "Long task",
-    "severity": "critical",
-    "confidence": "strong",
-   },
-  ],
- },
- "issues": [
-  {
-   "id": "lcp-slow",
-   "label": "LCP exceeds 2.5s threshold",
-   "severity": "critical",
-   "value": 4320,
-   "unit": "ms",
-   "threshold": 2500,
-   "confidence": "strong",
-   "remediation": "Optimize largest contentful paint element...",
-   "chainId": "lcp:3",
-  },
- ],
- "chains": [
-  {
-   "id": "lcp:3",
-   "rootCause": "LCP > 2.5s",
-   "impact": "Poor user experience",
-   "path": [
-    "TTFB delayed by server response",
-    "Render-blocking stylesheets",
-    "LCP element render delay",
-   ],
-   "length": 3,
-  },
- ],
- "recommendations": [
-  {
-   "priority": "critical",
-   "category": "LCP",
-   "title": "Optimize Largest Contentful Paint",
-   "action": "Inline critical styles, defer non-critical CSS",
-   "expectedImpact": "Reduces LCP by ~40%",
-   "relatedIssues": ["lcp-slow"],
-  },
- ],
- "features": {
-  /* raw extracted features for cross-referencing */
- },
+	"meta": {
+		"url": "https://example.com",
+		"analyzedAt": "2026-06-09T19:15:19.000Z",
+		"reportVersion": "1.0.0",
+		"featureCount": 7,
+		"graphNodeCount": 24,
+		"graphEdgeCount": 31,
+		"ruleCount": 32,
+	},
+	"summary": {
+		"score": "moderate", // "good" | "moderate" | "poor"
+		"criticalIssues": 2,
+		"warnings": 5,
+		"infos": 3,
+		"topIssues": [
+			{
+				"id": "js-long-task",
+				"label": "Long task",
+				"severity": "critical",
+				"confidence": "strong",
+			},
+		],
+	},
+	"issues": [
+		{
+			"id": "lcp-slow",
+			"label": "LCP exceeds 2.5s threshold",
+			"severity": "critical",
+			"value": 4320,
+			"unit": "ms",
+			"threshold": 2500,
+			"confidence": "strong",
+			"remediation": "Optimize largest contentful paint element...",
+			"chainId": "lcp:3",
+		},
+	],
+	"chains": [
+		{
+			"id": "lcp:3",
+			"rootCause": "LCP > 2.5s",
+			"impact": "Poor user experience",
+			"path": [
+				"TTFB delayed by server response",
+				"Render-blocking stylesheets",
+				"LCP element render delay",
+			],
+			"length": 3,
+		},
+	],
+	"recommendations": [
+		{
+			"priority": "critical",
+			"category": "LCP",
+			"title": "Optimize Largest Contentful Paint",
+			"action": "Inline critical styles, defer non-critical CSS",
+			"expectedImpact": "Reduces LCP by ~40%",
+			"relatedIssues": ["lcp-slow"],
+		},
+	],
+	"features": {
+		/* raw extracted features for cross-referencing */
+	},
 }
 ```
 
@@ -271,10 +271,10 @@ npm run dev            # tsx watch — no build step
 
 MIT
 
-[badge-version]: https://img.shields.io/npm/v/@gmod.one/webtrace.svg
-[badge-license]: https://img.shields.io/npm/l/@gmod.one/webtrace.svg
-[badge-downloads]: https://img.shields.io/npm/dm/@gmod.one/webtrace.svg
-[badge-stars]: https://img.shields.io/github/stars/Be1zebub/WebTracer.svg?style=flat&logo=github
-[npm]: https://www.npmjs.com/package/@gmod.one/webtrace
-[license]: https://github.com/Be1zebub/WebTracer/blob/master/LICENSE
-[repo]: https://github.com/Be1zebub/WebTracer
+[badge-version]: https://img.shields.io/npm/v/perfgraph.svg
+[badge-license]: https://img.shields.io/npm/l/perfgraph.svg
+[badge-downloads]: https://img.shields.io/npm/dm/perfgraph.svg
+[badge-stars]: https://img.shields.io/github/stars/Be1zebub/PerfGraph.svg?style=flat&logo=github
+[npm]: https://www.npmjs.com/package/perfgraph
+[license]: https://github.com/Be1zebub/PerfGraph/blob/master/LICENSE
+[repo]: https://github.com/Be1zebub/PerfGraph

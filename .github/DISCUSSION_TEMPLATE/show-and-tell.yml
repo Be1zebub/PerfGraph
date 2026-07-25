@@ -1,0 +1,17 @@
+title: ""
+labels: ["show-and-tell"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Show us how you're using PerfGraph! Share reports, integrations, or custom tooling.
+  - type: input
+    attributes:
+      label: URL tested
+      description: What site did you analyze?
+  - type: textarea
+    attributes:
+      label: Report / Results
+      description: Share your findings, screenshots, or interesting insights
+    validations:
+      required: true

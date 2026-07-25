@@ -1,5 +1,5 @@
 /**
- * Shared types used across the webtrace codebase.
+ * Shared types used across the perfgraph codebase.
  */
 
 /** Output file paths for a single collection run */
@@ -30,7 +30,7 @@ export interface OutputPaths {
 export interface CollectorRunOptions {
   /** Target URL to collect data from */
   url: string;
-  /** Base output directory (default: ./webtrace-output) */
+  /** Base output directory (default: ./perfgraph-output) */
   output: string;
   /** Number of runs (default: 1) */
   runs: number;
@@ -71,7 +71,7 @@ export interface RunResult {
 /** Default values for CollectorRunOptions */
 export const DEFAULT_RUN_OPTIONS: CollectorRunOptions = {
   url: '',
-  output: './webtrace-output',
+  output: './perfgraph-output',
   runs: 1,
   noLighthouse: false,
   noCoverage: false,

@@ -1,5 +1,5 @@
 /**
- * Test bootstrap and fixture loader for WebTrace ingestion tests.
+ * Test bootstrap and fixture loader for PerfGraph ingestion tests.
  *
  * Provides a shared loader function that resolves fixture paths relative
  * to the test directory, so each test file can load its fixtures without

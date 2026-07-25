@@ -54,7 +54,7 @@ describe('buildReportMarkdown', () => {
   it('generates a non-empty string for a minimal report', () => {
     const md = buildReportMarkdown(minimalReport());
     expect(md.length).toBeGreaterThan(0);
-    expect(md).toContain('# WebTrace Performance Report');
+    expect(md).toContain('# PerfGraph Performance Report');
     expect(md).toContain('GOOD');
   });
 

@@ -11,7 +11,7 @@ What happened? What did you expect?
 
 **To reproduce**
 ```bash
-webtrace collect --url <url> --output ./out
+perfgraph collect --url <url> --output ./out
 # or whatever command you ran
 ```
 

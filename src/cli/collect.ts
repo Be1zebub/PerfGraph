@@ -60,7 +60,7 @@ export async function runCollect(args: string[]): Promise<CollectResult | null> 
  *
  * Accepts:
  *   --url <url>        (required)
- *   --output <dir>     (default: ./webtrace-output)
+ *   --output <dir>     (default: ./perfgraph-output)
  *   --runs <n>         (default: 1)
  *   --no-lighthouse    (flag)
  *   --no-coverage      (flag)
@@ -154,7 +154,7 @@ function parseArgs(args: string[]): CollectorRunOptions | null {
 
   if (!options.url) {
     console.error('Error: --url is required');
-    console.error('Usage: webtrace collect --url <url> [--output <dir>] [--runs <n>]');
+    console.error('Usage: perfgraph collect --url <url> [--output <dir>] [--runs <n>]');
     return null;
   }
 

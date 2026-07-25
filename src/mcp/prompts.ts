@@ -3,7 +3,7 @@
  *
  * Prompts provide guided starting points for common diagnostic workflows.
  * When an AI client invokes a prompt, it receives structured messages that
- * guide it through the analysis process using WebTrace tools.
+ * guide it through the analysis process using PerfGraph tools.
  *
  * @packageDocumentation
  */
@@ -17,14 +17,14 @@ import type { GetPromptResult } from '@modelcontextprotocol/sdk/types.js';
 
 /**
  * Instructions injected into every diagnostic prompt to ensure the AI
- * agent uses WebTrace effectively.
+ * agent uses PerfGraph effectively.
  */
-const SYSTEM_CONTEXT = `You are a web performance diagnostician powered by WebTrace.
+const SYSTEM_CONTEXT = `You are a web performance diagnostician powered by PerfGraph.
 
 WORKFLOW:
-1. Call \`webtrace_run\` with the target URL to collect and analyze performance data.
+1. Call \`perfgraph_run\` with the target URL to collect and analyze performance data.
 2. Read the results — the tool returns a summary with score, issue counts, and resource URIs.
-3. Read the full report via the \`webtrace://\` resource URIs returned in the response.
+3. Read the full report via the \`perfgraph://\` resource URIs returned in the response.
 4. Analyze the findings and provide actionable recommendations.
 
 The report contains:
@@ -77,7 +77,7 @@ Read the report from ${reportUri} and provide a focused LCP analysis with specif
     : `Perform a detailed LCP (Largest Contentful Paint) analysis on ${url}.
 
 Follow this workflow:
-1. Call \`webtrace_run\` with url="${url}" to collect and analyze performance data
+1. Call \`perfgraph_run\` with url="${url}" to collect and analyze performance data
 2. Read the report via the returned resource URIs
 3. Focus your analysis specifically on LCP performance:
 
@@ -136,7 +136,7 @@ export function buildAuditPrompt(args: z.infer<typeof AuditArgsSchema>): GetProm
   const userMessage = `Perform a comprehensive performance audit of ${url}${focusHint}.
 
 Workflow:
-1. Call \`webtrace_run\` with url="${url}"${runs ? `, runs=${runs}` : ''}
+1. Call \`perfgraph_run\` with url="${url}"${runs ? `, runs=${runs}` : ''}
 2. Read the full report from the returned resource URIs
 3. Analyze ALL of the following dimensions${focus && focus !== 'all' ? ` (with primary focus on ${focus})` : ''}:
 
@@ -191,23 +191,23 @@ Format the audit as a structured report with clear sections and actionable findi
 // ---------------------------------------------------------------------------
 
 export const SummarizeArgsSchema = z.object({
-  /** Resource URI of the report to summarize (e.g., webtrace://artifacts/<path>/report.toon) */
+  /** Resource URI of the report to summarize (e.g., perfgraph://artifacts/<path>/report.toon) */
   reportUri: z.string().min(1, 'reportUri is required'),
   /** Detail level for the summary */
   detail: z.enum(['brief', 'normal', 'detailed']).optional(),
 });
 
 /**
- * Summarize an existing WebTrace report in natural language.
+ * Summarize an existing PerfGraph report in natural language.
  *
- * Takes a report resource URI (as returned by webtrace_run) and produces
+ * Takes a report resource URI (as returned by perfgraph_run) and produces
  * a human-readable summary of the findings.
  */
 export function buildSummarizePrompt(args: z.infer<typeof SummarizeArgsSchema>): GetPromptResult {
   const { reportUri, detail } = args;
   const verbosity = detail ?? 'normal';
 
-  const userMessage = `Read and summarize the WebTrace performance report at ${reportUri}.
+  const userMessage = `Read and summarize the PerfGraph performance report at ${reportUri}.
 
 Read the report and provide a ${verbosity === 'brief' ? 'concise (3-5 bullet points)' : verbosity === 'detailed' ? 'comprehensive, section-by-section' : 'balanced'} summary.
 
@@ -229,7 +229,7 @@ ${verbosity === 'brief' ? `
 Base your summary solely on the report data — do not add information not present in the report. Use natural language, not JSON.`;
 
   return {
-    description: `Summarize WebTrace report at ${reportUri}`,
+    description: `Summarize PerfGraph report at ${reportUri}`,
     messages: [
       {
         role: 'user',

@@ -2,10 +2,10 @@
  * `mcp` subcommand handler.
  *
  * Starts a MCP (Model Context Protocol) stdio server so that AI agents
- * (Claude, OpenCode, Cursor, etc.) can invoke webtrace tools directly.
+ * (Claude, OpenCode, Cursor, etc.) can invoke perfgraph tools directly.
  *
  * Usage:
- *   webtrace mcp
+ *   perfgraph mcp
  */
 
 import { startMcpServer } from '../mcp/server.js';
@@ -16,12 +16,12 @@ MCP OPTIONS
   JSON-RPC messages on stdin/stdout.
 
 EXAMPLES
-  webtrace mcp
+  perfgraph mcp
 
 MCP CLIENT CONFIG
   {
     "mcpServers": {
-      "webtrace": {
+      "perfgraph": {
         "command": "node",
         "args": ["dist/index.js", "mcp"]
       }

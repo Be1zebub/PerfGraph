@@ -2,7 +2,7 @@
  * MCP tool handler implementations.
  *
  * Each handler corresponds to a registered MCP tool. The primary shortcut
- * `webtrace_run` runs the full pipeline (collect → normalize → extract →
+ * `perfgraph_run` runs the full pipeline (collect → normalize → extract →
  * analyze → report) in a single call. Advanced users can call individual
  * pipeline steps via the dedicated tools.
  *
@@ -240,7 +240,7 @@ export async function handleReport(
 // ---------------------------------------------------------------------------
 
 /**
- * Run the full WebTrace pipeline: collect → normalize → extract → analyze → report.
+ * Run the full PerfGraph pipeline: collect → normalize → extract → analyze → report.
  *
  * Sends progress notifications and returns structured results suitable for
  * AI agent consumption.

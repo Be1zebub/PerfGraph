@@ -1,12 +1,12 @@
 /**
  * `analyze` subcommand handler.
  *
- * Reads a FeatureSet JSON file (produced by `webtrace extract`) and runs
+ * Reads a FeatureSet JSON file (produced by `perfgraph extract`) and runs
  * causal graph analysis, outputting a CausalGraph as JSON.
  *
  * Usage:
- *   webtrace analyze <features-file>
- *   webtrace analyze --input features.json --output graph.json --pretty
+ *   perfgraph analyze <features-file>
+ *   perfgraph analyze --input features.json --output graph.json --pretty
  *
  * @packageDocumentation
  */
@@ -17,7 +17,7 @@ import { buildCausalGraph } from '../causal/index.js';
 import { FeatureSetSchema } from '../extract/types.js';
 import type { FeatureSet } from '../extract/types.js';
 
-/** Help text shown by `webtrace analyze --help` */
+/** Help text shown by `perfgraph analyze --help` */
 const ANALYZE_HELP = `
 ANALYZE OPTIONS
   <file>                Path to a FeatureSet JSON file (positional, required)
@@ -27,9 +27,9 @@ ANALYZE OPTIONS
   --help, -h            Show this help message
 
 EXAMPLES
-  webtrace analyze ./features.json
-  webtrace analyze ./features.json --output graph.json
-  webtrace analyze ./features.json --pretty
+  perfgraph analyze ./features.json
+  perfgraph analyze ./features.json --output graph.json
+  perfgraph analyze ./features.json --pretty
 `;
 
 /** Result of the analyze command execution */

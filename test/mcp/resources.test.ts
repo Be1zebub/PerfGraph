@@ -29,9 +29,9 @@ describe('encodePath', () => {
   });
 
   it('handles Windows-style absolute paths', () => {
-    const encoded = encodePath('C:\\projects\\webtrace\\output');
+    const encoded = encodePath('C:\\projects\\perfgraph\\output');
     // encodePath only replaces path separators, not colons
-    expect(encoded).toBe('C:_projects_webtrace_output');
+    expect(encoded).toBe('C:_projects_perfgraph_output');
     // All backslashes should be replaced
     expect(encoded).not.toContain('\\');
   });
@@ -50,13 +50,13 @@ describe('readResource', () => {
 
   it('throws on missing filename', () => {
     expect(() =>
-      readResource('webtrace://artifacts/path/'),
+      readResource('perfgraph://artifacts/path/'),
     ).toThrow('Invalid resource URI');
   });
 
   it('throws on non-existent file', () => {
     expect(() =>
-      readResource('webtrace://artifacts/nonexistent_dir/report.toon'),
+      readResource('perfgraph://artifacts/nonexistent_dir/report.toon'),
     ).toThrow('Resource not found');
   });
 });
@@ -67,7 +67,7 @@ describe('listArtifacts', () => {
   });
 
   it('returns empty array for non-existent directory', () => {
-    const result = listArtifacts('webtrace://artifacts/does_not_exist_12345');
+    const result = listArtifacts('perfgraph://artifacts/does_not_exist_12345');
     expect(result).toEqual([]);
   });
 });

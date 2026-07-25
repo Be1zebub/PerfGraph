@@ -16,7 +16,7 @@ import { z } from 'zod';
 export const RunArgsSchema = z.object({
   /** Target URL to analyze (required) */
   url: z.string().min(1, 'url is required'),
-  /** Base output directory (default: ./webtrace-output) */
+  /** Base output directory (default: ./perfgraph-output) */
   outputDir: z.string().optional(),
   /** Number of collection runs (default: 1) */
   runs: z.number().int().min(1).max(10).optional(),
@@ -28,7 +28,7 @@ export const RunArgsSchema = z.object({
 export const CollectArgsSchema = z.object({
   /** Target URL to collect data from (required) */
   url: z.string().min(1, 'url is required'),
-  /** Base output directory (default: ./webtrace-output) */
+  /** Base output directory (default: ./perfgraph-output) */
   outputDir: z.string().optional(),
   /** Number of collection runs (default: 1) */
   runs: z.number().int().min(1).max(10).optional(),
@@ -70,7 +70,7 @@ export const ReportArgsSchema = z.object({
 
 /** Schema for the toon tool — encodes run results in TOON format */
 export const ToonArgsSchema = z.object({
-  /** Path to the run directory containing webtrace output files */
+  /** Path to the run directory containing perfgraph output files */
   runDir: z.string().min(1, 'runDir is required'),
 });
 

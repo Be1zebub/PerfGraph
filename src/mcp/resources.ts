@@ -1,11 +1,11 @@
 /**
- * MCP resources for WebTrace.
+ * MCP resources for PerfGraph.
  *
  * Registers resource templates and static resources that allow AI agents
  * to read collected data and diagnostic reports via MCP.
  *
  * Resource URI scheme:
- *   webtrace://artifacts/{encoded-path}/{filename}
+ *   perfgraph://artifacts/{encoded-path}/{filename}
  *
  * Where {encoded-path} is the run directory path encoded with `/` → `_` substitution.
  *
@@ -28,14 +28,14 @@ export interface ResourceContent {
 }
 
 /**
- * Read a resource by its WebTrace URI.
+ * Read a resource by its PerfGraph URI.
  *
- * Format: webtrace://artifacts/{encoded-path}/{filename}
+ * Format: perfgraph://artifacts/{encoded-path}/{filename}
  *
  * The encoded-path uses `_` as path separator (safe for URIs).
  */
 export function readResource(uri: string): ResourceContent {
-  const parsed = /^webtrace:\/\/artifacts\/(.+?)\/(.+)$/.exec(uri);
+  const parsed = /^perfgraph:\/\/artifacts\/(.+?)\/(.+)$/.exec(uri);
 
   if (!parsed) {
     throw new Error(`Invalid resource URI: ${uri}`);
@@ -68,10 +68,10 @@ export function readResource(uri: string): ResourceContent {
 }
 
 /**
- * List known artifacts in a WebTrace run directory.
+ * List known artifacts in a PerfGraph run directory.
  */
 export function listArtifacts(uri: string): ResourceContent[] {
-  const parsed = /^webtrace:\/\/artifacts\/(.+)$/.exec(uri);
+  const parsed = /^perfgraph:\/\/artifacts\/(.+)$/.exec(uri);
 
   if (!parsed) {
     throw new Error(`Invalid resource URI: ${uri}`);
@@ -85,7 +85,7 @@ export function listArtifacts(uri: string): ResourceContent[] {
     return [];
   }
 
-  // Common WebTrace artifacts
+  // Common PerfGraph artifacts
   const artifacts = [
     'report.toon',
     'features.toon',
@@ -113,7 +113,7 @@ export function listArtifacts(uri: string): ResourceContent[] {
     if (existsSync(filePath)) {
       const content = readFileSync(filePath, 'utf-8');
       results.push({
-        uri: `webtrace://artifacts/${encodedPath}/${artifact}`,
+        uri: `perfgraph://artifacts/${encodedPath}/${artifact}`,
         text: content,
         mimeType: 'application/json',
       });
@@ -124,7 +124,7 @@ export function listArtifacts(uri: string): ResourceContent[] {
 }
 
 /**
- * Encode a filesystem path for use in a webtrace:// URI.
+ * Encode a filesystem path for use in a perfgraph:// URI.
  *
  * Replaces path separators with `_` to produce a valid URI segment.
  */
@@ -138,7 +138,7 @@ export function encodePath(filePath: string): string {
  * URI scheme: webtr://runs/{runRef}/toon
  *
  * The {runRef} is the run directory path with `_` as separator (same
- * encoding as webtrace://artifacts/ URIs). Reads the run's report
+ * encoding as perfgraph://artifacts/ URIs). Reads the run's report
  * and features JSON, then encodes them as TOON for token-efficient
  * LLM consumption.
  */

@@ -23,9 +23,9 @@ describe('LcpAnalysisArgsSchema', () => {
   it('accepts url + reportUri', () => {
     const result = LcpAnalysisArgsSchema.parse({
       url: 'https://example.com',
-      reportUri: 'webtrace://artifacts/path/report.toon',
+      reportUri: 'perfgraph://artifacts/path/report.toon',
     });
-    expect(result.reportUri).toBe('webtrace://artifacts/path/report.toon');
+    expect(result.reportUri).toBe('perfgraph://artifacts/path/report.toon');
   });
 
   it('rejects empty url', () => {
@@ -71,14 +71,14 @@ describe('AuditArgsSchema', () => {
 describe('SummarizeArgsSchema', () => {
   it('accepts reportUri only', () => {
     const result = SummarizeArgsSchema.parse({
-      reportUri: 'webtrace://artifacts/foo/report.toon',
+      reportUri: 'perfgraph://artifacts/foo/report.toon',
     });
-    expect(result.reportUri).toBe('webtrace://artifacts/foo/report.toon');
+    expect(result.reportUri).toBe('perfgraph://artifacts/foo/report.toon');
   });
 
   it('accepts reportUri with detail', () => {
     const result = SummarizeArgsSchema.parse({
-      reportUri: 'webtrace://artifacts/foo/report.toon',
+      reportUri: 'perfgraph://artifacts/foo/report.toon',
       detail: 'brief',
     });
     expect(result.detail).toBe('brief');
@@ -87,7 +87,7 @@ describe('SummarizeArgsSchema', () => {
   it('rejects invalid detail', () => {
     expect(() =>
       SummarizeArgsSchema.parse({
-        reportUri: 'webtrace://artifacts/foo/report.toon',
+        reportUri: 'perfgraph://artifacts/foo/report.toon',
         detail: 'ultra',
       }),
     ).toThrow();
@@ -114,26 +114,26 @@ describe('buildLcpAnalysisPrompt', () => {
     const result = buildLcpAnalysisPrompt({ url: 'https://example.com' });
     const text = result.messages[0]!.content.text;
 
-    expect(text).toContain('webtrace_run');
-    expect(text).toContain('webtrace://');
+    expect(text).toContain('perfgraph_run');
+    expect(text).toContain('perfgraph://');
   });
 
   it('uses reportUri variant when provided', () => {
     const result = buildLcpAnalysisPrompt({
       url: 'https://example.com',
-      reportUri: 'webtrace://artifacts/path/report.toon',
+      reportUri: 'perfgraph://artifacts/path/report.toon',
     });
     const text = result.messages[0]!.content.text;
 
     expect(text).toContain('Analyze the LCP performance from the existing report');
-    expect(text).toContain('webtrace://artifacts/path/report.toon');
+    expect(text).toContain('perfgraph://artifacts/path/report.toon');
   });
 
   it('uses URL variant when no reportUri', () => {
     const result = buildLcpAnalysisPrompt({ url: 'https://example.com' });
     const text = result.messages[0]!.content.text;
 
-    expect(text).toContain('webtrace_run');
+    expect(text).toContain('perfgraph_run');
     expect(text).toContain('https://example.com');
   });
 });
@@ -174,16 +174,16 @@ describe('buildAuditPrompt', () => {
 describe('buildSummarizePrompt', () => {
   it('returns GetPromptResult with standard structure', () => {
     const result = buildSummarizePrompt({
-      reportUri: 'webtrace://artifacts/path/report.toon',
+      reportUri: 'perfgraph://artifacts/path/report.toon',
     });
 
-    expect(result.description).toContain('Summarize WebTrace report');
+    expect(result.description).toContain('Summarize PerfGraph report');
     expect(result.messages).toHaveLength(1);
   });
 
   it('generates brief summary when detail=brief', () => {
     const result = buildSummarizePrompt({
-      reportUri: 'webtrace://artifacts/path/report.toon',
+      reportUri: 'perfgraph://artifacts/path/report.toon',
       detail: 'brief',
     });
     const text = result.messages[0]!.content.text;
@@ -194,7 +194,7 @@ describe('buildSummarizePrompt', () => {
 
   it('generates detailed summary when detail=detailed', () => {
     const result = buildSummarizePrompt({
-      reportUri: 'webtrace://artifacts/path/report.toon',
+      reportUri: 'perfgraph://artifacts/path/report.toon',
       detail: 'detailed',
     });
     const text = result.messages[0]!.content.text;
@@ -205,7 +205,7 @@ describe('buildSummarizePrompt', () => {
 
   it('defaults to normal detail level', () => {
     const result = buildSummarizePrompt({
-      reportUri: 'webtrace://artifacts/path/report.toon',
+      reportUri: 'perfgraph://artifacts/path/report.toon',
     });
     const text = result.messages[0]!.content.text;
 

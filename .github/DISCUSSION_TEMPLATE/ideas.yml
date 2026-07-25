@@ -1,0 +1,17 @@
+title: ""
+labels: ["ideas"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Got an idea for PerfGraph? Share it here!
+  - type: textarea
+    attributes:
+      label: Idea
+      description: What would you like to see added or changed?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Use case
+      description: How would this help you? What problem does it solve?
