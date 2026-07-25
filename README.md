@@ -11,6 +11,9 @@ PerfGraph launches a headless Chromium browser, captures performance data via Ch
 npx perfgraph run --url https://example.com --pretty
 ```
 
+PerfGraph — not a symptom list, a diagnosis.
+Root cause → impact → fix, in one graph.
+
 ## Why
 
 Lighthouse gives you a score. PerfGraph tells you _why_ it's bad and what to fix first.
@@ -138,68 +141,68 @@ The report is a single JSON file. Key sections:
 
 ```jsonc
 {
-	"meta": {
-		"url": "https://example.com",
-		"analyzedAt": "2026-06-09T19:15:19.000Z",
-		"reportVersion": "1.0.0",
-		"featureCount": 7,
-		"graphNodeCount": 24,
-		"graphEdgeCount": 31,
-		"ruleCount": 32,
-	},
-	"summary": {
-		"score": "moderate", // "good" | "moderate" | "poor"
-		"criticalIssues": 2,
-		"warnings": 5,
-		"infos": 3,
-		"topIssues": [
-			{
-				"id": "js-long-task",
-				"label": "Long task",
-				"severity": "critical",
-				"confidence": "strong",
-			},
-		],
-	},
-	"issues": [
-		{
-			"id": "lcp-slow",
-			"label": "LCP exceeds 2.5s threshold",
-			"severity": "critical",
-			"value": 4320,
-			"unit": "ms",
-			"threshold": 2500,
-			"confidence": "strong",
-			"remediation": "Optimize largest contentful paint element...",
-			"chainId": "lcp:3",
-		},
-	],
-	"chains": [
-		{
-			"id": "lcp:3",
-			"rootCause": "LCP > 2.5s",
-			"impact": "Poor user experience",
-			"path": [
-				"TTFB delayed by server response",
-				"Render-blocking stylesheets",
-				"LCP element render delay",
-			],
-			"length": 3,
-		},
-	],
-	"recommendations": [
-		{
-			"priority": "critical",
-			"category": "LCP",
-			"title": "Optimize Largest Contentful Paint",
-			"action": "Inline critical styles, defer non-critical CSS",
-			"expectedImpact": "Reduces LCP by ~40%",
-			"relatedIssues": ["lcp-slow"],
-		},
-	],
-	"features": {
-		/* raw extracted features for cross-referencing */
-	},
+ "meta": {
+  "url": "https://example.com",
+  "analyzedAt": "2026-06-09T19:15:19.000Z",
+  "reportVersion": "1.0.0",
+  "featureCount": 7,
+  "graphNodeCount": 24,
+  "graphEdgeCount": 31,
+  "ruleCount": 32,
+ },
+ "summary": {
+  "score": "moderate", // "good" | "moderate" | "poor"
+  "criticalIssues": 2,
+  "warnings": 5,
+  "infos": 3,
+  "topIssues": [
+   {
+    "id": "js-long-task",
+    "label": "Long task",
+    "severity": "critical",
+    "confidence": "strong",
+   },
+  ],
+ },
+ "issues": [
+  {
+   "id": "lcp-slow",
+   "label": "LCP exceeds 2.5s threshold",
+   "severity": "critical",
+   "value": 4320,
+   "unit": "ms",
+   "threshold": 2500,
+   "confidence": "strong",
+   "remediation": "Optimize largest contentful paint element...",
+   "chainId": "lcp:3",
+  },
+ ],
+ "chains": [
+  {
+   "id": "lcp:3",
+   "rootCause": "LCP > 2.5s",
+   "impact": "Poor user experience",
+   "path": [
+    "TTFB delayed by server response",
+    "Render-blocking stylesheets",
+    "LCP element render delay",
+   ],
+   "length": 3,
+  },
+ ],
+ "recommendations": [
+  {
+   "priority": "critical",
+   "category": "LCP",
+   "title": "Optimize Largest Contentful Paint",
+   "action": "Inline critical styles, defer non-critical CSS",
+   "expectedImpact": "Reduces LCP by ~40%",
+   "relatedIssues": ["lcp-slow"],
+  },
+ ],
+ "features": {
+  /* raw extracted features for cross-referencing */
+ },
 }
 ```
 
