@@ -8,7 +8,7 @@ import { join } from 'node:path';
 /**
  * Create a timestamped output directory under the given base path.
  *
- * Directory format: `webtrace_<hostname>_<YYYYMMDD_HHmmss>`
+ * Directory format: `perfgraph_<hostname>_<YYYYMMDD_HHmmss>`
  *
  * @param basePath - Base directory for output
  * @param url - Source URL (used to extract hostname for directory naming)
@@ -19,7 +19,7 @@ export async function createOutputDir(basePath: string, url: string): Promise<st
   const now = new Date();
   const pad = (n: number): string => String(n).padStart(2, '0');
   const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-  const dirName = `webtrace_${hostname}_${timestamp}`;
+  const dirName = `perfgraph_${hostname}_${timestamp}`;
   const dirPath = join(basePath, dirName);
   await mkdir(dirPath, { recursive: true });
   return dirPath;

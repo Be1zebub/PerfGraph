@@ -1,37 +1,37 @@
 #!/usr/bin/env node
 
 /**
- * WebTrace CLI entry point.
+ * PerfGraph CLI entry point.
  *
  * All command handlers are lazy-loaded so that `--help` stays fast —
  * Playwright, Lighthouse and other heavy deps only load when a
  * command is actually invoked.
  *
  * Usage:
- *   webtrace collect --url <url> [--output <dir>] [--runs <n>]
- *   webtrace normalize <input> [--output <file>] [--pretty]
- *   webtrace extract <ir-file> [--output <file>] [--pretty]
- *   webtrace analyze <features-file> [--output <file>] [--pretty]
- *   webtrace report <features-file> [--output <file>] [--pretty]
- *   webtrace run --url <url> [--output <dir>] [--runs <n>] [--pretty]
- *   webtrace mcp                              (MCP stdio server for AI agents)
- *   webtrace --help
+ *   perfgraph collect --url <url> [--output <dir>] [--runs <n>]
+ *   perfgraph normalize <input> [--output <file>] [--pretty]
+ *   perfgraph extract <ir-file> [--output <file>] [--pretty]
+ *   perfgraph analyze <features-file> [--output <file>] [--pretty]
+ *   perfgraph report <features-file> [--output <file>] [--pretty]
+ *   perfgraph run --url <url> [--output <dir>] [--runs <n>] [--pretty]
+ *   perfgraph mcp                              (MCP stdio server for AI agents)
+ *   perfgraph --help
  */
 
 const args = process.argv.slice(2);
 
 function printHelp(): void {
   console.log(`
-WebTrace — Web Performance Diagnostic Tool
+PerfGraph — Web Performance Diagnostic Tool
 
 USAGE
-  webtrace collect --url <url> [options]
-  webtrace normalize <input> [--output <file>] [--pretty]
-  webtrace extract <ir-file> [--output <file>] [--pretty]
-  webtrace analyze <features-file> [--output <file>] [--pretty]
-  webtrace report <features-file> [--output <file>] [--pretty]
-  webtrace run --url <url> [options]             (full pipeline in one command)
-  webtrace mcp                                   (MCP stdio server for AI agents)
+  perfgraph collect --url <url> [options]
+  perfgraph normalize <input> [--output <file>] [--pretty]
+  perfgraph extract <ir-file> [--output <file>] [--pretty]
+  perfgraph analyze <features-file> [--output <file>] [--pretty]
+  perfgraph report <features-file> [--output <file>] [--pretty]
+  perfgraph run --url <url> [options]             (full pipeline in one command)
+  perfgraph mcp                                   (MCP stdio server for AI agents)
 
 COMMANDS
   collect    Collect performance data from a URL
@@ -44,7 +44,7 @@ COMMANDS
 
 COLLECT OPTIONS
   --url <url>           Target URL to analyze (required)
-  --output <dir>        Output directory (default: ./webtrace-output)
+  --output <dir>        Output directory (default: ./perfgraph-output)
   --runs <n>            Number of collection runs (default: 1)
   --device <name>       Device name for mobile emulation (e.g. "iPhone 13")
   --no-lighthouse       Skip Lighthouse collection
@@ -82,7 +82,7 @@ REPORT OPTIONS
 
 RUN OPTIONS
   --url <url>           Target URL to analyze (required)
-  --output <dir>        Output directory (default: ./webtrace-output)
+  --output <dir>        Output directory (default: ./perfgraph-output)
   --runs <n>            Number of collection runs (default: 1)
   --pretty              Pretty-print final report JSON
   --device <name>       Device name for mobile emulation (e.g. "iPhone 13")
@@ -96,20 +96,20 @@ MCP OPTIONS
   No flags required. Starts an MCP stdio server.
 
 EXAMPLES
-  webtrace collect --url https://example.com
-  webtrace collect --url https://example.com --output ./results
-  webtrace collect --url https://example.com --runs 3
-  webtrace collect --url https://example.com --no-lighthouse
-  webtrace normalize ./runs/2025-01-15T10-30-00
-  webtrace normalize ./runs/2025-01-15T10-30-00 --output ir.json
-  webtrace normalize ./runs       (auto-detect latest run)
-  webtrace extract ./ir.json
-  webtrace extract ./ir.json --output features.toon --pretty
-  webtrace analyze ./features.toon --output graph.toon --pretty
-  webtrace report ./features.toon --output report.toon --pretty
-  webtrace run --url https://example.com --pretty          (full pipeline)
-  webtrace run --url https://example.com --pretty --runs 3
-  webtrace mcp                                            (MCP server)
+  perfgraph collect --url https://example.com
+  perfgraph collect --url https://example.com --output ./results
+  perfgraph collect --url https://example.com --runs 3
+  perfgraph collect --url https://example.com --no-lighthouse
+  perfgraph normalize ./runs/2025-01-15T10-30-00
+  perfgraph normalize ./runs/2025-01-15T10-30-00 --output ir.json
+  perfgraph normalize ./runs       (auto-detect latest run)
+  perfgraph extract ./ir.json
+  perfgraph extract ./ir.json --output features.toon --pretty
+  perfgraph analyze ./features.toon --output graph.toon --pretty
+  perfgraph report ./features.toon --output report.toon --pretty
+  perfgraph run --url https://example.com --pretty          (full pipeline)
+  perfgraph run --url https://example.com --pretty --runs 3
+  perfgraph mcp                                            (MCP server)
 `);
 }
 

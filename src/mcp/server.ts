@@ -1,19 +1,19 @@
 /**
- * WebTrace MCP Server.
+ * PerfGraph MCP Server.
  *
- * Exposes WebTrace's full performance diagnostic pipeline through
- * the Model Context Protocol. Primary usage is the `webtrace_run` tool
+ * Exposes PerfGraph's full performance diagnostic pipeline through
+ * the Model Context Protocol. Primary usage is the `perfgraph_run` tool
  * (one-shot URL → report). Advanced users can invoke individual pipeline
  * steps via dedicated tools.
  *
- * Resources are available at `webtrace://artifacts/{encoded-path}/{filename}`
+ * Resources are available at `perfgraph://artifacts/{encoded-path}/{filename}`
  * for reading collected data and generated reports.
  *
  * Usage (AI client config):
  * ```json
  * {
  *   "mcpServers": {
- *     "webtrace": {
+ *     "perfgraph": {
  *       "command": "node",
  *       "args": ["dist/index.js", "mcp"]
  *     }
@@ -76,7 +76,7 @@ import {
  */
 export async function startMcpServer(): Promise<void> {
   const server = new McpServer({
-    name: 'webtrace',
+    name: 'perfgraph',
     version: '1.0.0',
   });
 
@@ -85,18 +85,18 @@ export async function startMcpServer(): Promise<void> {
   // -----------------------------------------------------------------------
 
   server.registerTool(
-    'webtrace_run',
+    'perfgraph_run',
     {
-      description: `Run the full WebTrace pipeline on a URL: collect trace data, normalize, extract diagnostic features, build a causal degradation graph, and generate a performance report.
+      description: `Run the full PerfGraph pipeline on a URL: collect trace data, normalize, extract diagnostic features, build a causal degradation graph, and generate a performance report.
 
 Returns a structured result with report file paths, performance score, issue counts, and a severity map of detected problems.
 
-After calling this tool, you can read the full report via the webtrace:// resource URIs returned in the 'files' field.
+After calling this tool, you can read the full report via the perfgraph:// resource URIs returned in the 'files' field.
 
 EXAMPLE:
-  agent calls webtrace_run with url = "https://example.com"
+  agent calls perfgraph_run with url = "https://example.com"
   → receives summary + file paths to report.json, features.json, graph.json
-  → reads report.json via webtrace://artifacts/<path>/report.json for full details
+  → reads report.json via perfgraph://artifacts/<path>/report.json for full details
 
 This is the PRIMARY tool — use this for most performance analysis tasks.`,
       inputSchema: RunArgsSchema,
@@ -120,9 +120,9 @@ This is the PRIMARY tool — use this for most performance analysis tasks.`,
         const enriched = {
           ...result,
           resourceUris: {
-            report: `webtrace://artifacts/${encodedPath}/report.json`,
-            features: `webtrace://artifacts/${encodedPath}/features.json`,
-            graph: `webtrace://artifacts/${encodedPath}/graph.json`,
+            report: `perfgraph://artifacts/${encodedPath}/report.json`,
+            features: `perfgraph://artifacts/${encodedPath}/features.json`,
+            graph: `perfgraph://artifacts/${encodedPath}/graph.json`,
           },
         };
 
@@ -149,7 +149,7 @@ This is the PRIMARY tool — use this for most performance analysis tasks.`,
   // -----------------------------------------------------------------------
 
   server.registerTool(
-    'webtrace_collect',
+    'perfgraph_collect',
     {
       description: `[Advanced] Collect raw performance data from a URL without running the full pipeline.
 
@@ -157,7 +157,7 @@ Use this when you only need the raw CDP data (trace, network, lighthouse, etc.)
 without normalization or analysis. The collected data is written to a local
 output directory.
 
-ADVANCED TOOL: For most use cases, prefer webtrace_run which runs the full pipeline.`,
+ADVANCED TOOL: For most use cases, prefer perfgraph_run which runs the full pipeline.`,
       inputSchema: CollectArgsSchema,
     },
     async (args, extra) => {
@@ -202,14 +202,14 @@ ADVANCED TOOL: For most use cases, prefer webtrace_run which runs the full pipel
   );
 
   server.registerTool(
-    'webtrace_normalize',
+    'perfgraph_normalize',
     {
       description: `[Advanced] Normalize collected CDP data into a validated Intermediate Representation (IRBundle).
 
-Accepts a run directory path (from webtrace_collect) and produces a typed,
+Accepts a run directory path (from perfgraph_collect) and produces a typed,
 validated IRBundle with normalized timestamps across all clock domains.
 
-ADVANCED TOOL: Usually called automatically by webtrace_run. Use this when
+ADVANCED TOOL: Usually called automatically by perfgraph_run. Use this when
 you need to inspect or debug the normalization step.`,
       inputSchema: NormalizeArgsSchema,
     },
@@ -234,7 +234,7 @@ you need to inspect or debug the normalization step.`,
   );
 
   server.registerTool(
-    'webtrace_extract',
+    'perfgraph_extract',
     {
       description: `[Advanced] Extract diagnostic features from a normalized IRBundle.
 
@@ -242,7 +242,7 @@ Computes 7 feature metrics: LCP breakdown, critical path analysis, main thread
 blocking, JS execution hotspots, layout shifts, third-party overhead, and
 render-blocking resource score.
 
-ADVANCED TOOL: Usually called automatically by webtrace_run. Use this when
+ADVANCED TOOL: Usually called automatically by perfgraph_run. Use this when
 you want to inspect the raw feature set before causal analysis.`,
       inputSchema: ExtractArgsSchema,
     },
@@ -267,7 +267,7 @@ you want to inspect the raw feature set before causal analysis.`,
   );
 
   server.registerTool(
-    'webtrace_analyze',
+    'perfgraph_analyze',
     {
       description: `[Advanced] Build a causal degradation graph from extracted features.
 
@@ -275,7 +275,7 @@ Applies 30+ causal rules from 4 rule sets (LCP, JS, Network, Layout) and
 produces a deterministic DAG where each edge has a confidence level
 (strong/medium/weak).
 
-ADVANCED TOOL: Usually called automatically by webtrace_run. Use this when
+ADVANCED TOOL: Usually called automatically by perfgraph_run. Use this when
 you need to inspect the causal graph structure directly.`,
       inputSchema: AnalyzeArgsSchema,
     },
@@ -300,7 +300,7 @@ you need to inspect the causal graph structure directly.`,
   );
 
   server.registerTool(
-    'webtrace_report',
+    'perfgraph_report',
     {
       description: `[Advanced] Generate a comprehensive performance report from extracted features.
 
@@ -308,7 +308,7 @@ Produces a self-contained JSON report with: issues sorted by severity, causal
 chains from root cause to impact, prioritized recommendations with remediation
 texts (in Russian), and raw features for cross-referencing.
 
-ADVANCED TOOL: Usually called automatically by webtrace_run. Use this when
+ADVANCED TOOL: Usually called automatically by perfgraph_run. Use this when
 you have already extracted features and want to generate a report separately.`,
       inputSchema: ReportArgsSchema,
     },
@@ -337,15 +337,15 @@ you have already extracted features and want to generate a report separately.`,
   // -----------------------------------------------------------------------
 
   server.registerTool(
-    'webtrace_toon',
+    'perfgraph_toon',
     {
-      description: `Convert a WebTrace run's results into TOON (Token-Oriented Object Notation) format.
+      description: `Convert a PerfGraph run's results into TOON (Token-Oriented Object Notation) format.
 
 TOON is a compact, human-readable encoding of JSON designed to minimise token
 usage in LLM prompts. It declares array lengths and field headers once, then
 streams row values — making it ideal for AI consumption.
 
-Accepts a run directory path (from webtrace_run or webtrace_collect) and
+Accepts a run directory path (from perfgraph_run or perfgraph_collect) and
 returns the run's report, features, and causal graph encoded as TOON.
 
 After calling this tool, you can also access the TOON data via the resource
@@ -385,31 +385,31 @@ LLM-based analysis or chaining into other AI tools.`,
   // -----------------------------------------------------------------------
 
   server.registerResource(
-    'webtrace-artifact',
-    new ResourceTemplate('webtrace://artifacts/{path}/{filename}', {
+    'perfgraph-artifact',
+    new ResourceTemplate('perfgraph://artifacts/{path}/{filename}', {
       list: async () => {
         return {
           resources: [
             {
-              uri: 'webtrace://artifacts/<run-dir>/report.json',
+              uri: 'perfgraph://artifacts/<run-dir>/report.json',
               name: 'Full Diagnostic Report',
               description:
                 'Complete performance report with issues, causal chains, and recommendations',
             },
             {
-              uri: 'webtrace://artifacts/<run-dir>/features.json',
+              uri: 'perfgraph://artifacts/<run-dir>/features.json',
               name: 'Extracted Features',
               description:
                 'Raw diagnostic feature set (LCP, TBT, CLS, critical path, etc.)',
             },
             {
-              uri: 'webtrace://artifacts/<run-dir>/graph.json',
+              uri: 'perfgraph://artifacts/<run-dir>/graph.json',
               name: 'Causal Graph',
               description:
                 'Directed acyclic graph of causal degradation relationships',
             },
             {
-              uri: 'webtrace://artifacts/<run-dir>/ir.json',
+              uri: 'perfgraph://artifacts/<run-dir>/ir.json',
               name: 'Intermediate Representation',
               description:
                 'Normalized IRBundle with all collected performance data',
@@ -419,18 +419,18 @@ LLM-based analysis or chaining into other AI tools.`,
       },
     }),
     {
-      title: 'WebTrace Artifact',
+      title: 'PerfGraph Artifact',
       description:
-        'Access WebTrace collected data and generated reports by run directory and filename. ' +
+        'Access PerfGraph collected data and generated reports by run directory and filename. ' +
         'The {path} segment is the filesystem path with separators replaced by underscores. ' +
-        'For example, path "C:_Users_project_webtrace-output_example" maps to ' +
-        '"C:/Users/project/webtrace-output/example". Use file paths returned by webtrace_run.',
+        'For example, path "C:_Users_project_perfgraph-output_example" maps to ' +
+        '"C:/Users/project/perfgraph-output/example". Use file paths returned by perfgraph_run.',
       mimeType: 'application/json',
     },
     async (uri, { path: encodedPath, filename }) => {
       const pathPart = Array.isArray(encodedPath) ? encodedPath.join('_') : (encodedPath ?? '');
       const filePart = Array.isArray(filename) ? filename.join('_') : (filename ?? '');
-      const fullUri = `webtrace://artifacts/${pathPart}/${filePart}`;
+      const fullUri = `perfgraph://artifacts/${pathPart}/${filePart}`;
       const content = readResource(fullUri);
 
       return {
@@ -447,27 +447,27 @@ LLM-based analysis or chaining into other AI tools.`,
 
   // Register a convenience resource for listing all artifacts in a run dir
   server.registerResource(
-    'webtrace-artifact-list',
-    new ResourceTemplate('webtrace://artifacts/{path}', {
+    'perfgraph-artifact-list',
+    new ResourceTemplate('perfgraph://artifacts/{path}', {
       list: async () => ({
         resources: [
           {
-            uri: 'webtrace://artifacts/<run-dir>',
+            uri: 'perfgraph://artifacts/<run-dir>',
             name: 'Run Directory Contents',
             description:
-              'Lists all available WebTrace artifacts in a run directory',
+              'Lists all available PerfGraph artifacts in a run directory',
           },
         ],
       }),
     }),
     {
-      title: 'WebTrace Run Directory',
-      description: 'List all available artifacts in a WebTrace run directory',
+      title: 'PerfGraph Run Directory',
+      description: 'List all available artifacts in a PerfGraph run directory',
       mimeType: 'application/json',
     },
     async (uri, { path: encodedPath }) => {
       const pathPart = Array.isArray(encodedPath) ? encodedPath.join('/') : (encodedPath ?? '');
-      const fullUri = `webtrace://artifacts/${pathPart}`;
+      const fullUri = `perfgraph://artifacts/${pathPart}`;
       const artifacts = listArtifacts(fullUri);
 
       if (artifacts.length === 0) {
@@ -516,7 +516,7 @@ LLM-based analysis or chaining into other AI tools.`,
   // -----------------------------------------------------------------------
 
   server.registerResource(
-    'webtrace-toon',
+    'perfgraph-toon',
     new ResourceTemplate('webtr://runs/{runRef}/toon', {
       list: async () => {
         return {
@@ -532,11 +532,11 @@ LLM-based analysis or chaining into other AI tools.`,
       },
     }),
     {
-      title: 'WebTrace TOON Output',
+      title: 'PerfGraph TOON Output',
       description:
-        'Token-optimised TOON encoding of a WebTrace run\'s report, features, and causal graph. ' +
+        'Token-optimised TOON encoding of a PerfGraph run\'s report, features, and causal graph. ' +
         'The {runRef} segment is the run directory path with path separators replaced by underscores, ' +
-        'matching the encoding used in webtrace://artifacts/ URIs.',
+        'matching the encoding used in perfgraph://artifacts/ URIs.',
       mimeType: 'text/plain',
     },
     async (uri, { runRef }) => {
@@ -561,7 +561,7 @@ LLM-based analysis or chaining into other AI tools.`,
   // -----------------------------------------------------------------------
 
   server.registerPrompt(
-    'webtrace_analyze_lcp',
+    'perfgraph_analyze_lcp',
     {
       title: 'LCP Performance Analysis',
       description: `Run a focused diagnostic analysis of Largest Contentful Paint (LCP) performance for a URL. Analyzes LCP breakdown (TTFB, resource delay, render delay, element render time), render-blocking resources, and causal chains. Provides prioritized remediation steps.`,
@@ -571,7 +571,7 @@ LLM-based analysis or chaining into other AI tools.`,
   );
 
   server.registerPrompt(
-    'webtrace_audit',
+    'perfgraph_audit',
     {
       title: 'Full Site Performance Audit',
       description: `Run a comprehensive performance audit covering all diagnostic dimensions: LCP, JavaScript, Network, Layout, and Third-party. Optionally focus on a specific category. Produces a structured report with all issues, causal chains, and prioritized recommendations.`,
@@ -581,10 +581,10 @@ LLM-based analysis or chaining into other AI tools.`,
   );
 
   server.registerPrompt(
-    'webtrace_summarize_report',
+    'perfgraph_summarize_report',
     {
       title: 'Summarize Performance Report',
-      description: `Read an existing WebTrace report (by resource URI) and produce a natural-language summary. Supports brief, normal, and detailed verbosity levels. Use this when you already have a report and want a human-readable overview.`,
+      description: `Read an existing PerfGraph report (by resource URI) and produce a natural-language summary. Supports brief, normal, and detailed verbosity levels. Use this when you already have a report and want a human-readable overview.`,
       argsSchema: SummarizeArgsSchema.shape,
     },
     (args) => buildSummarizePrompt(args),

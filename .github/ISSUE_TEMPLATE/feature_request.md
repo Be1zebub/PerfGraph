@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Something you want webtrace to do
+about: Something you want perfgraph to do
 title: ''
 labels: enhancement
 assignees: ''

@@ -162,7 +162,7 @@ const KNOWN_ARTIFACTS: ReadonlyArray<{
 // ---------------------------------------------------------------------------
 
 /**
- * Scan a WebTrace run directory and write a manifest.toon describing all
+ * Scan a PerfGraph run directory and write a manifest.toon describing all
  * discovered artifacts.
  *
  * Only files listed in the known-artifacts table are included with

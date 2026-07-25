@@ -1,12 +1,12 @@
 /**
  * `extract` subcommand handler.
  *
- * Reads a normalised IRBundle JSON file (produced by `webtrace normalize`)
+ * Reads a normalised IRBundle JSON file (produced by `perfgraph normalize`)
  * and runs feature extraction, outputting a FeatureSet as JSON.
  *
  * Usage:
- *   webtrace extract <ir-file>
- *   webtrace extract --input ir.json --output features.json --pretty
+ *   perfgraph extract <ir-file>
+ *   perfgraph extract --input ir.json --output features.json --pretty
  */
 
 import { readFileSync, existsSync } from 'node:fs';
@@ -15,7 +15,7 @@ import { extract } from '../extract/index.js';
 import { IRBundleSchema } from '../normalize/types.js';
 import type { IRBundle } from '../normalize/types.js';
 
-/** Help text shown by `webtrace extract --help` */
+/** Help text shown by `perfgraph extract --help` */
 const EXTRACT_HELP = `
 EXTRACT OPTIONS
   <file>                Path to a normalised IR JSON file (positional, required)
@@ -25,9 +25,9 @@ EXTRACT OPTIONS
   --help, -h            Show this help message
 
 EXAMPLES
-  webtrace extract ./ir.json
-  webtrace extract ./ir.json --output features.json
-  webtrace extract ./ir.json --pretty
+  perfgraph extract ./ir.json
+  perfgraph extract ./ir.json --output features.json
+  perfgraph extract ./ir.json --pretty
 `;
 
 /** Result of the extract command execution */

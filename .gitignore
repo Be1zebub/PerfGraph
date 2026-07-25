@@ -17,7 +17,7 @@ test-results/
 test/fixtures/generated/
 
 # Collected data & reports
-webtrace-output/
+perfgraph-output/
 
 # Packed artifacts
 *.tgz

@@ -1,7 +1,7 @@
 /**
  * Report types — Zod schemas and TypeScript types for Phase 5.
  *
- * The Report is the final output of WebTrace: a self-contained JSON document
+ * The Report is the final output of PerfGraph: a self-contained JSON document
  * designed for AI consumption. It combines the CausalGraph with remediations,
  * severity scoring, and correlated FeatureSet data.
  *

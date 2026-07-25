@@ -6,7 +6,7 @@
  * outputting only the final Report JSON.
  *
  * Usage:
- *   webtrace run --url <url> [--output <dir>] [--runs <n>] [--pretty]
+ *   perfgraph run --url <url> [--output <dir>] [--runs <n>] [--pretty]
  */
 
 import { writeFileSync } from 'node:fs';
@@ -36,7 +36,7 @@ import type { CollectorRunOptions } from '../shared/types.js';
 const RUN_HELP = `
 RUN OPTIONS
   --url <url>           Target URL to analyze (required)
-  --output <dir>        Output directory (default: ./webtrace-output)
+  --output <dir>        Output directory (default: ./perfgraph-output)
   --runs <n>            Number of collection runs (default: 1)
   --pretty              Pretty-print final report JSON
   --device <name>       Device name for mobile emulation (e.g. "iPhone 13")
@@ -47,9 +47,9 @@ RUN OPTIONS
   --help, -h            Show this help message
 
 EXAMPLES
-  webtrace run --url https://example.com
-  webtrace run --url https://example.com --pretty
-  webtrace run --url https://example.com --pretty --runs 3
+  perfgraph run --url https://example.com
+  perfgraph run --url https://example.com --pretty
+  perfgraph run --url https://example.com --pretty --runs 3
 `;
 
 /** Result of the full pipeline execution */
@@ -315,7 +315,7 @@ export async function runRunFromArgs(
 
   if (!url) {
     console.error('Error: --url is required');
-    console.error('Usage: webtrace run --url <url> [--output <dir>] [--runs <n>] [--pretty]');
+    console.error('Usage: perfgraph run --url <url> [--output <dir>] [--runs <n>] [--pretty]');
     return null;
   }
 

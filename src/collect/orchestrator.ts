@@ -348,7 +348,7 @@ export async function run(
   const options: CollectorRunOptions = { ...DEFAULT_RUN_OPTIONS, ...partialOptions, url };
   const results: RunResult[] = [];
 
-  console.error(`WebTrace collection starting — ${options.runs} run(s) for ${url}`);
+  console.error(`PerfGraph collection starting — ${options.runs} run(s) for ${url}`);
   console.error(`Output directory: ${options.output}`);
   console.error('');
 

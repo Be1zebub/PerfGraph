@@ -1,5 +1,5 @@
 /**
- * Shared utility functions used across the webtrace codebase.
+ * Shared utility functions used across the perfgraph codebase.
  */
 
 /** Severity ordering helper: critical > warning > info */

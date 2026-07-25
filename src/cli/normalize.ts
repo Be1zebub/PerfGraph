@@ -5,7 +5,7 @@
  * Intermediate Representation (IRBundle) as JSON.
  *
  * Usage:
- *   webtrace normalize <run-dir>
+ *   perfgraph normalize <run-dir>
  *
  * The run directory should contain the JSON files produced by a single
  * collection run (trace.json, network.json, performance.json, etc.).
@@ -27,7 +27,7 @@ const DATA_FILES = [
   'lighthouse.json',
 ] as const;
 
-/** Help text shown by `webtrace normalize --help` */
+/** Help text shown by `perfgraph normalize --help` */
 const NORMALIZE_HELP = `
 NORMALIZE OPTIONS
   <input>               Path to a run directory OR parent output directory (positional, required)
@@ -36,10 +36,10 @@ NORMALIZE OPTIONS
   --help, -h            Show this help message
 
 EXAMPLES
-  webtrace normalize ./runs/2025-01-15T10-30-00
-  webtrace normalize ./runs/2025-01-15T10-30-00 --output ir.json
-  webtrace normalize ./runs       (auto-detect latest run)
-  webtrace normalize ./runs --pretty --output ir.json
+  perfgraph normalize ./runs/2025-01-15T10-30-00
+  perfgraph normalize ./runs/2025-01-15T10-30-00 --output ir.json
+  perfgraph normalize ./runs       (auto-detect latest run)
+  perfgraph normalize ./runs --pretty --output ir.json
 `;
 
 /** Result of the normalize command execution */

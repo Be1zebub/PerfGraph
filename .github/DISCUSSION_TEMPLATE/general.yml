@@ -1,0 +1,13 @@
+title: ""
+labels: ["general"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for starting a discussion! Feel free to ask questions, share ideas, or discuss anything PerfGraph-related.
+  - type: textarea
+    attributes:
+      label: Discussion
+      description: What's on your mind?
+    validations:
+      required: true

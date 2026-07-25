@@ -1,12 +1,12 @@
 /**
  * `report` subcommand handler.
  *
- * Reads a FeatureSet JSON file (from `webtrace extract`), runs causal analysis,
+ * Reads a FeatureSet JSON file (from `perfgraph extract`), runs causal analysis,
  * generates a comprehensive Report, and outputs as JSON.
  *
  * Usage:
- *   webtrace report <features-file>
- *   webtrace report --input features.json --output report.json --pretty
+ *   perfgraph report <features-file>
+ *   perfgraph report --input features.json --output report.json --pretty
  *
  * @packageDocumentation
  */
@@ -18,7 +18,7 @@ import { buildReport } from '../report/index.js';
 import { FeatureSetSchema } from '../extract/types.js';
 import type { FeatureSet } from '../extract/types.js';
 
-/** Help text shown by `webtrace report --help` */
+/** Help text shown by `perfgraph report --help` */
 const REPORT_HELP = `
 REPORT OPTIONS
   <file>                Path to a FeatureSet JSON file (positional, required)
@@ -28,9 +28,9 @@ REPORT OPTIONS
   --help, -h            Show this help message
 
 EXAMPLES
-  webtrace report ./features.json
-  webtrace report ./features.json --output report.json
-  webtrace report ./features.json --pretty
+  perfgraph report ./features.json
+  perfgraph report ./features.json --output report.json
+  perfgraph report ./features.json --pretty
 `;
 
 /** Result of the report command execution */
