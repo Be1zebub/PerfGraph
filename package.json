@@ -1,6 +1,6 @@
 {
 	"name": "perfgraph",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"type": "module",
 	"description": "CDP-powered perf CLI — causal degradation graphs, not just Lighthouse scores",
 	"license": "MIT",
