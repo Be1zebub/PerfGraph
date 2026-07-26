@@ -2,6 +2,7 @@
 
 [![npm][badge-version]][npm] [![license][badge-license]][license]
 [![npm downloads][badge-downloads]][npm] [![github stars][badge-stars]][repo]
+![Visitors](https://visitor-badge.laobi.icu/badge?page_id=Be1zebub/PerfGraph)
 
 > Real browser metrics → causal degradation graph → actionable report. Built for AI agents, useful for humans.
 
