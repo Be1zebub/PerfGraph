@@ -15,6 +15,8 @@ npx perfgraph run --url https://example.com --pretty
 PerfGraph — not a symptom list, a diagnosis.  
 Root cause → impact → fix, in one graph.
 
+**[Add to your AI agent →](#mcp-integration)**
+
 ## Why
 
 Lighthouse gives you a score. PerfGraph tells you _why_ it's bad and what to fix first.
@@ -58,6 +60,8 @@ Full pipeline, one command:
 ```bash
 perfgraph run --url https://example.com --pretty
 ```
+
+> **Want to use PerfGraph from your AI agent?** See [MCP integration](#mcp-integration).
 
 Step by step:
 
@@ -135,6 +139,103 @@ Generates the final performance report. Accepts a FeatureSet JSON (from `extract
 ### `perfgraph mcp`
 
 Starts an MCP stdio server for AI agent integration. No flags. See [AGENTS.md](AGENTS.md) for details.
+
+## MCP integration
+
+PerfGraph ships as an MCP server. Any AI agent with MCP support can call `perfgraph_analyze` to run the full pipeline and get structured results.
+
+### Add to your agent
+
+Copy the prompt below and paste it into your AI agent (Claude, Codex, Cursor, Copilot, etc.):
+
+```
+Add the PerfGraph MCP server to my configuration. Run:
+
+npx perfgraph mcp
+
+This is a stdio MCP server. Add it as a local MCP server with command: npx perfgraph mcp
+The server exposes a perfgraph_analyze tool that takes a URL and returns a full performance report.
+```
+
+### Config snippets
+
+<details>
+<summary>Claude (Desktop / Code / CLI)</summary>
+
+MCP config can live in multiple places. Easiest — dedicated file:
+
+```bash
+# create the file if it doesn't exist
+cat > ~/.claude/mcp_servers.json << 'EOF'
+{
+  "perfgraph": {
+    "command": "npx",
+    "args": ["perfgraph", "mcp"]
+  }
+}
+EOF
+```
+
+Other locations (higher priority overrides lower):
+
+- `~/.claude.json` — main config
+- `~/.claude/settings.json` — user global
+- `~/.claude/settings.local.json` — user local
+- `.claude/settings.local.json` — project-specific
+- `.mcp.json` — project-scoped, version-controlled
+
+</details>
+
+<details>
+<summary>OpenCode</summary>
+
+Add to `~/.config/opencode/opencode.json` under `"mcp"`:
+
+```json
+{
+ "mcp": {
+  "perfgraph": {
+   "type": "local",
+   "command": ["npx", "perfgraph", "mcp"],
+   "enabled": true
+  }
+ }
+}
+```
+
+Or project-scoped — `opencode.json` in project root (overrides global).
+
+</details>
+
+<details>
+<summary>Cursor</summary>
+
+Global: `~/.cursor/cli-config.json` (macOS/Linux) or `$env:USERPROFILE\.cursor\cli-config.json` (Windows).
+Project: `<project>/.cursor/cli.json`.
+
+```json
+{
+ "mcpServers": {
+  "perfgraph": {
+   "command": "npx",
+   "args": ["perfgraph", "mcp"]
+  }
+ }
+}
+```
+
+</details>
+
+### What the agent gets
+
+Once connected, the agent can call `perfgraph_analyze` with a URL and receive:
+
+| Output                           | What's in it                                                         |
+| -------------------------------- | -------------------------------------------------------------------- |
+| `insights.json`                  | Quick summary — scores, LCP element, render-blocking URLs (~5-15 KB) |
+| `report.json`                    | Full report — issues, causal chains, prioritized fixes               |
+| `manifest.json`                  | File index for navigating raw data                                   |
+| `lighthouse.json` / `trace.json` | Deep-dive data (large, read only when needed)                        |
 
 ## Report format
 

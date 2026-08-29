@@ -1,40 +1,24 @@
-# Dependencies
-node_modules/
+# Deny everything
+*
 
-# Build output
-dist/
-*.tsbuildinfo
+# Git
+!.gitignore
 
-# Source maps
-*.js.map
-*.d.ts.map
+# npm package contents (what gets published)
+!dist/
+!README.md
+!LICENSE
 
-# Test output & fixtures
-coverage/
-test-output/
-test-out/
-test-results/
-test/fixtures/generated/
+# Source & config (needed to build/test)
+!src/
+!test/
+!package.json
+!package-lock.json
+!tsconfig.json
+!vitest.config.ts
 
-# Collected data & reports
-perfgraph-output/
-
-# Packed artifacts
-*.tgz
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE / editor
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Project-level planning & internal
-.planning/
-.docs/
-.codegraph/
-.opencode/
-.sisyphus/
+# Repo docs & CI
+!.github/
+!AGENTS.md
+!CONTRIBUTING.md
+!assets/
