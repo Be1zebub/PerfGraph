@@ -151,10 +151,21 @@ Copy the prompt below and paste it into your AI agent (Claude, Codex, Cursor, Co
 ```
 Add the PerfGraph MCP server to my configuration. Run:
 
-npx perfgraph mcp
+npx -y perfgraph@latest mcp
 
-This is a stdio MCP server. Add it as a local MCP server with command: npx perfgraph mcp
+This is a stdio MCP server. Add it as a local MCP server with command: npx -y perfgraph@latest mcp
 The server exposes a perfgraph_analyze tool that takes a URL and returns a full performance report.
+```
+
+Use `-y` so the first run does not wait for interactive install confirmation. The first startup can take several seconds while `npx` downloads the package and the server loads its browser-performance dependencies. Configure the MCP client startup timeout to 15 seconds.
+
+For Codex, use:
+
+```toml
+[mcp_servers.perfgraph]
+command = "npx"
+args = ["-y", "perfgraph@latest", "mcp"]
+startup_timeout_sec = 15
 ```
 
 ### Config snippets
@@ -170,7 +181,7 @@ cat > ~/.claude/mcp_servers.json << 'EOF'
 {
   "perfgraph": {
     "command": "npx",
-    "args": ["perfgraph", "mcp"]
+    "args": ["-y", "perfgraph@latest", "mcp"]
   }
 }
 EOF
@@ -196,7 +207,7 @@ Add to `~/.config/opencode/opencode.json` under `"mcp"`:
  "mcp": {
   "perfgraph": {
    "type": "local",
-   "command": ["npx", "perfgraph", "mcp"],
+   "command": ["npx", "-y", "perfgraph@latest", "mcp"],
    "enabled": true
   }
  }
@@ -218,7 +229,7 @@ Project: `<project>/.cursor/cli.json`.
  "mcpServers": {
   "perfgraph": {
    "command": "npx",
-   "args": ["perfgraph", "mcp"]
+   "args": ["-y", "perfgraph@latest", "mcp"]
   }
  }
 }

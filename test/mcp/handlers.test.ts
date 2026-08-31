@@ -5,6 +5,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { once } from 'node:events';
+import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, rmSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -87,6 +89,47 @@ describe('handleNormalize', () => {
     expect(result).toHaveProperty('ir');
     expect(result).toHaveProperty('irFile');
     expect(result.irFile).toContain('ir.json');
+  });
+});
+
+describe('MCP startup', () => {
+  it('answers an initialize request sent immediately after process start', async () => {
+    const server = spawn(
+      process.execPath,
+      ['--import', 'tsx', 'src/index.ts', 'mcp'],
+      { cwd: process.cwd(), stdio: 'pipe' },
+    );
+
+    const response = once(server.stdout, 'data');
+    server.stdin.write(
+      `${JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2025-06-18',
+          capabilities: {},
+          clientInfo: { name: 'startup-test', version: '1' },
+        },
+      })}\n`,
+    );
+
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const [chunk] = await Promise.race([
+        response,
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(() => reject(new Error('MCP initialize timed out')), 5000);
+        }),
+      ]);
+
+      const message: { id?: number; result?: unknown } = JSON.parse(String(chunk));
+      expect(message.id).toBe(1);
+      expect(message.result).toBeDefined();
+    } finally {
+      if (timeout !== undefined) clearTimeout(timeout);
+      server.kill();
+    }
   });
 });
 

@@ -13,7 +13,6 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { writeManifest } from '../output/manifest.js';
-import { run } from '../collect/orchestrator.js';
 import type { RawDataBundle } from '../collect/types.js';
 import { loadRunDir } from '../shared/fs-utils.js';
 import { DEFAULT_RUN_OPTIONS } from '../shared/types.js';
@@ -115,6 +114,7 @@ export async function handleCollect(
   runDir?: string;
   error?: string;
 }> {
+  const { run } = await import('../collect/orchestrator.js');
   const options: CollectorRunOptions = {
     ...DEFAULT_RUN_OPTIONS,
     url,
@@ -271,6 +271,7 @@ export async function handleRun(
     issues: Record<string, string>;
   };
 }> {
+  const { run } = await import('../collect/orchestrator.js');
   const baseOutput = outputDir ?? DEFAULT_RUN_OPTIONS.output;
 
   const options: CollectorRunOptions = {
