@@ -21,6 +21,7 @@
 
 # Repo docs & CI
 !.github/
+!.github/**
 !AGENTS.md
 !CONTRIBUTING.md
 !assets/
