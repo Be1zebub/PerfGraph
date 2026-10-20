@@ -81,8 +81,10 @@ describe('E2E extract pipeline (TST-03)', () => {
   it('JS hotspots has valid structure', () => {
     const features = extract(bundle);
     const js = features.jsHotspots!;
-    expect(js.bootupTime).toBeGreaterThanOrEqual(0);
     expect(js.contextCount).toBeGreaterThan(0);
+    expect(js.longTaskCount).toBeGreaterThanOrEqual(0);
+    // The heuristic bootup time is not a measurement and is not reported.
+    expect(js.bootupTime).toBeUndefined();
   });
 
   it('layout shifts has valid structure', () => {

@@ -32,10 +32,13 @@ export function extractJSHotspots(ir: IRBundle): JSHotspots {
   ).length;
 
   return {
-    // Only a measured value is reported: the previous heuristic multiplied the
-    // execution-context count by a constant and presented it as bootup time.
-    bootupTime: runtime.hydrationCost?.bootupTime,
-    evaluatedScripts: runtime.hydrationCost?.evaluatedScripts,
+    // The runtime layer derives a bootup time and a script count from
+    // heuristics — a multiple of the execution-context count and the number
+    // of console messages that mention a script. They are not measurements,
+    // so they are not reported here. `scriptCount` and `compileTimeMs` are
+    // the real values.
+    bootupTime: undefined,
+    evaluatedScripts: undefined,
     longTaskCount,
     maxBlockingDuration,
     contextCount: runtime.executionContexts.length,

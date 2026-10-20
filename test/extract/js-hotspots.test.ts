@@ -70,8 +70,10 @@ describe('extractJSHotspots', () => {
       },
     });
     const result = extractJSHotspots(ir);
-    expect(result.bootupTime).toBe(850);
-    expect(result.evaluatedScripts).toBe(12);
+    // The heuristic bootup time and script count are not measurements and
+    // are therefore not reported.
+    expect(result.bootupTime).toBeUndefined();
+    expect(result.evaluatedScripts).toBeUndefined();
     expect(result.longTaskCount).toBe(5);
     expect(result.maxBlockingDuration).toBe(120);
     expect(result.contextCount).toBe(2);
@@ -100,8 +102,8 @@ describe('extractJSHotspots', () => {
       },
     });
     const result = extractJSHotspots(ir);
-    expect(result.bootupTime).toBe(450);
-    expect(result.evaluatedScripts).toBe(6);
+    expect(result.bootupTime).toBeUndefined();
+    expect(result.evaluatedScripts).toBeUndefined();
     expect(result.contextCount).toBe(0);
   });
 
