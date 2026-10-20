@@ -40,6 +40,12 @@ function computeTiming(
       timing.sslStart >= 0 && timing.sslEnd >= 0
         ? timing.sslEnd - timing.sslStart
         : undefined,
+    // The time the request spent in a proxy. Without it the time to the first
+    // byte is understated by the whole proxy phase.
+    proxy:
+      timing.proxyStart >= 0 && timing.proxyEnd >= 0
+        ? timing.proxyEnd - timing.proxyStart
+        : undefined,
     wait: timing.sendEnd - timing.sendStart,
     receive: timing.receiveHeadersEnd - timing.sendEnd,
   };

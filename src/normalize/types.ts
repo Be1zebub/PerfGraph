@@ -165,10 +165,12 @@ export const PerformanceIRSchema = z.object({
 export const NormalizedRequestTimingSchema = z.object({
   /** DNS resolution time */
   dns: z.number().optional(),
-  /** TCP connect time, excluding the TLS handshake nested inside it */
+  /** TCP connect time, including the TLS handshake nested inside it */
   connect: z.number().optional(),
   /** TLS handshake time */
   ssl: z.number().optional(),
+  /** Time the request spent in a proxy */
+  proxy: z.number().optional(),
   /** Time the request was being sent */
   wait: z.number().optional(),
   /** Time until the response headers arrived — the server wait */

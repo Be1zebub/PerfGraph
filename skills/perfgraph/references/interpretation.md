@@ -112,6 +112,17 @@ decide whether it really blocked anything:
 When the Lighthouse list and the network list disagree, `renderBlockingSources`
 tells you which resources only one of them saw.
 
+## Time to the first byte
+
+`lcpBreakdown.ttfb` is the time from the start of the request to the first
+byte, split into `ttfbParts`: DNS, TCP, TLS, proxy and the server wait. The
+proxy phase belongs to it — a request that spends seconds in a proxy has a slow
+first byte even when the server answers instantly.
+
+When the sum of the parts is much smaller than the time the visitor waited,
+the difference is the time before the request started. Say so instead of
+blaming the server.
+
 ## Document chain
 
 `insights.criticalPath.documentChain` appears when the browser loaded more

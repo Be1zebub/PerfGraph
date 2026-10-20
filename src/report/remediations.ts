@@ -18,7 +18,7 @@ export interface RemediationContext {
     selector?: string;
     lighthouseAuditId?: string;
     metric?: { name: string; value: number; unit: string };
-    ttfbParts?: { dns: number; connect: number; ssl: number; wait: number };
+    ttfbParts?: { dns: number; connect: number; ssl: number; proxy: number; wait: number };
   };
   /** The issue's value/metric for context (e.g. TTFB=1200) */
   value?: number;
@@ -242,11 +242,12 @@ export function getRemediation(
     if (issueId === 'high-ttfb' && context.value != null) {
       const parts = context.evidence?.ttfbParts;
       if (parts) {
-        const setup = parts.dns + parts.connect + parts.ssl;
+        const setup = parts.dns + parts.connect + parts.ssl + parts.proxy;
         // Most of a slow TTFB is connection setup, not server processing.
         // Blaming the backend in that case sends the user to the wrong place.
         if (setup > parts.wait) {
-          return `TTFB is ${Math.round(context.value)}ms, but only ${Math.round(parts.wait)}ms was server wait — ${Math.round(setup)}ms went into connection setup (DNS ${Math.round(parts.dns)}ms, TCP ${Math.round(parts.connect)}ms, TLS ${Math.round(parts.ssl)}ms). Check the distance to the PoP, DNS resolution and TLS handshake before touching server code.`;
+          const proxy = parts.proxy > 0 ? `, proxy ${Math.round(parts.proxy)}ms` : '';
+          return `TTFB is ${Math.round(context.value)}ms, but only ${Math.round(parts.wait)}ms was server wait — ${Math.round(setup)}ms went into connection setup (DNS ${Math.round(parts.dns)}ms, TCP ${Math.round(parts.connect)}ms, TLS ${Math.round(parts.ssl)}ms${proxy}). Check the distance to the PoP, DNS resolution, the proxy and the TLS handshake before touching server code.`;
         }
         return `TTFB is ${Math.round(context.value)}ms, of which ${Math.round(parts.wait)}ms is server wait. Reduce server response time: cache the response, move the origin closer to visitors, and remove slow middleware.`;
       }

@@ -21,6 +21,7 @@ export const LCPBreakdownSchema = z.object({
       dns: z.number(),
       connect: z.number(),
       ssl: z.number(),
+      proxy: z.number(),
       wait: z.number(),
     })
     .optional(),

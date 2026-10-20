@@ -48,7 +48,8 @@ the only runtime interface, and the agent-facing layer is a skill.
 - the trace LCP was never parsed: the event name did not match the one Chrome
   emits
 - the time to the first byte is measured instead of added up wrongly; the
-  report no longer tells the user the server answered instantly
+  report no longer tells the user the server answered instantly, and the time
+  a request spent in a proxy is part of it
 - main-thread work is counted per process and only for the outermost events,
   and Total Blocking Time counts the main thread only
 - the run environment and the collection warnings reach the report

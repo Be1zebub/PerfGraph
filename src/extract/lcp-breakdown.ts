@@ -233,10 +233,14 @@ function extractTTFB(
     const ssl = doc.timing.ssl ?? 0;
     // The TLS handshake is part of the connect phase.
     const connect = Math.max(0, (doc.timing.connect ?? 0) - ssl);
+    // The time the request spent in a proxy is part of the wait, and it can
+    // be the largest part of it. Leaving it out understated the time to the
+    // first byte by seconds.
+    const proxy = doc.timing.proxy ?? 0;
     const wait = doc.timing.receive ?? doc.timing.wait ?? 0;
-    const ttfb = dns + connect + ssl + wait;
+    const ttfb = dns + connect + ssl + proxy + wait;
     if (Number.isFinite(ttfb)) {
-      return { total: Math.max(0, ttfb), parts: { dns, connect, ssl, wait } };
+      return { total: Math.max(0, ttfb), parts: { dns, connect, ssl, proxy, wait } };
     }
   }
 
