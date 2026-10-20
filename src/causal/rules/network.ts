@@ -111,7 +111,7 @@ export const excessiveRequestsChain = {
     const nodes: CausalNode[] = [
       {
         id: 'excessive-requests',
-        label: `${cp.requestCount} requests`,
+        label: `${cp.requestCount} unique requests`,
         type: 'metric',
         severity: isExcessive ? 'critical' : 'warning',
         value: cp.requestCount,

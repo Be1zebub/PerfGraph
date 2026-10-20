@@ -136,10 +136,15 @@ export const PerformanceIRSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const NormalizedRequestTimingSchema = z.object({
+  /** DNS resolution time */
   dns: z.number().optional(),
+  /** TCP connect time, excluding the TLS handshake nested inside it */
   connect: z.number().optional(),
+  /** TLS handshake time */
   ssl: z.number().optional(),
+  /** Time the request was being sent */
   wait: z.number().optional(),
+  /** Time until the response headers arrived — the server wait */
   receive: z.number().optional(),
 });
 

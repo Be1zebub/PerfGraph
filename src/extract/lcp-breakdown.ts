@@ -54,6 +54,16 @@ function isFavicon(url: string): boolean {
 }
 
 /**
+ * Whether a resource is inlined in the document.
+ *
+ * An inline resource has no network round trip, so it has no load phase and
+ * nothing to preload, re-encode or defer.
+ */
+function isInlineUrl(url: string): boolean {
+  return url.startsWith('data:') || url.startsWith('blob:');
+}
+
+/**
  * Classify an element from its label, snippet or selector.
  *
  * Only explicit image and text elements are classified. A generic container
@@ -196,12 +206,19 @@ function findLcpResource(
 /**
  * Extract TTFB from the network document request or fallback to Lighthouse.
  *
- * Primary: sum of DNS + Connect + SSL + Wait from the Document request's timing.
- * Fallback: Lighthouse audit 'server-response-time' numericValue.
- * Last resort: 0.
+ * The CDP timing breaks the wait down into DNS, TCP connect, TLS and the
+ * time until the response headers arrive. Two details matter:
  *
- * The parts are kept as well: most of a slow TTFB is connection setup rather
- * than server processing, and the recommendation has to reflect that.
+ * - the TLS handshake is nested inside the connect phase, so adding both
+ *   counts it twice;
+ * - `wait` is the time the request was being sent, while `receive` is the
+ *   time the server took to answer. The server wait is the one that says
+ *   something about the backend.
+ *
+ * @param ir - The IR bundle
+ * @param anchorMs - Timestamp the metrics are anchored to, used to pick the
+ *                   document request the page metrics belong to
+ * @returns The total time to the first byte and its parts
  */
 function extractTTFB(
   ir: IRBundle,
@@ -210,7 +227,11 @@ function extractTTFB(
   // Primary: Document request timing
   const doc = findDocumentRequest(ir.network.requests, anchorMs);
   if (doc?.timing) {
-    const { dns = 0, connect = 0, ssl = 0, wait = 0 } = doc.timing;
+    const dns = doc.timing.dns ?? 0;
+    const ssl = doc.timing.ssl ?? 0;
+    // The TLS handshake is part of the connect phase.
+    const connect = Math.max(0, (doc.timing.connect ?? 0) - ssl);
+    const wait = doc.timing.receive ?? doc.timing.wait ?? 0;
     const ttfb = dns + connect + ssl + wait;
     if (Number.isFinite(ttfb)) {
       return { total: Math.max(0, ttfb), parts: { dns, connect, ssl, wait } };
@@ -267,6 +288,24 @@ export function extractLCPBreakdown(ir: IRBundle): LCPBreakdown | undefined {
   // The Performance API reports the real load and render times of the LCP
   // resource. When they are present the breakdown is measured, not inferred.
   if (entry?.url && entry.loadTime !== undefined && entry.renderTime !== undefined) {
+    // An inline resource is already in the document: it has no load phase,
+    // so the time is a render delay and not a resource delay.
+    if (isInlineUrl(entry.url)) {
+      return {
+        ttfb,
+        ttfbParts,
+        resourceLoadDelay: 0,
+        resourceLoadTime: 0,
+        elementRenderDelay: clamp(entry.startTime - ttfb),
+        totalLCP,
+        lcpElementUrl: entry.url,
+        lcpResourceType: lcpResource?.resourceType ?? 'Image',
+        lcpElement: element,
+        source,
+        valueOrigin,
+      };
+    }
+
     const resourceLoadDelay = clamp(entry.loadTime - ttfb);
     const resourceLoadTime = clamp(entry.renderTime - entry.loadTime);
     const elementRenderDelay = clamp(entry.startTime - entry.renderTime);

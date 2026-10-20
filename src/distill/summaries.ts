@@ -21,6 +21,8 @@ import type {
 
 export interface NetworkSummary {
   totalRequests: number;
+  /** Distinct URLs — a script can be requested twice (preload and import) */
+  uniqueUrls: number;
   totalBytes: number;
   topRequestsByDuration: Array<{
     url: string;
@@ -103,6 +105,7 @@ export function buildNetworkSummary(network: NetworkRawData): NetworkSummary {
 
   return {
     totalRequests: requests.length,
+    uniqueUrls: new Set(requests.map((r) => r.url)).size,
     totalBytes: requests.reduce(
       (s, r) => s + (r.response?.encodedDataLength ?? 0),
       0,

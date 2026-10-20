@@ -19,7 +19,7 @@ import { loadRunDir } from '../shared/fs-utils.js';
 import { normalize } from '../normalize/index.js';
 import type { IRBundle } from '../normalize/types.js';
 import { extract } from '../extract/index.js';
-import { buildInsights, extractLighthouseScores } from '../distill/insights.js';
+import { buildInsights, collectRunWarnings, extractLighthouseScores } from '../distill/insights.js';
 import {
   buildNetworkSummary,
   buildLighthouseSummary,
@@ -180,7 +180,11 @@ export async function runRun(
   // in insights. Without this argument, a warning-only causal graph can
   // downgrade an otherwise green Lighthouse run to MODERATE.
   const lighthousePerformance = extractLighthouseScores(raw.lighthouse ?? {}).performance;
-  const report = buildReport(graph, features, lighthousePerformance, raw.warnings);
+  // The Lighthouse run warnings describe the quality of that run: a page that
+  // did not finish loading or was redirected. They belong in the report, not
+  // only in the insights.
+  const runWarnings = collectRunWarnings(raw.lighthouse ?? {}, raw.warnings);
+  const report = buildReport(graph, features, lighthousePerformance, runWarnings);
 
   // -----------------------------------------------------------------------
   // 6. Insights
@@ -190,7 +194,7 @@ export async function runRun(
   const insights = buildInsights(
     features,
     raw.lighthouse ?? {},
-    raw.warnings,
+    runWarnings,
     report.recommendations,
   );
 

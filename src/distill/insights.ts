@@ -71,6 +71,8 @@ export interface Insights {
     accessibility?: number;
     bestPractices?: number;
     seo?: number;
+    /** When Lighthouse ran — its own navigation, not the PerfGraph one */
+    fetchedAt?: string;
     lcpMs?: number;
     fcpMs?: number;
     cls?: number;
@@ -349,6 +351,20 @@ function buildCriticalPath(
   };
 }
 
+/**
+ * Collect the warnings of a run: the collector warnings and the Lighthouse
+ * run warnings.
+ *
+ * Both describe the quality of the measurement, so they belong to the same
+ * list and the same artifacts.
+ */
+export function collectRunWarnings(
+  lighthouseJson: unknown,
+  runWarnings?: string[],
+): string[] {
+  return buildWarnings(lighthouseJson, runWarnings);
+}
+
 /** Collect warnings from multiple sources. */
 function buildWarnings(lighthouseJson: unknown, runWarnings?: string[]): string[] {
   const warnings: string[] = [];
@@ -579,6 +595,8 @@ export function buildInsights(
 
   // 3. Navigate to LHR audit container
   const lhr = getLHRRoot(lighthouseJson);
+  const lighthouseFetchedAt =
+    typeof lhr.fetchTime === 'string' ? lhr.fetchTime : undefined;
 
   // 4. Metrics from Lighthouse audits
   const lcpAuditMs = getAuditNumericValue(lhr, 'largest-contentful-paint');
@@ -656,6 +674,7 @@ export function buildInsights(
       accessibility: scores.accessibility,
       bestPractices: scores.bestPractices,
       seo: scores.seo,
+      fetchedAt: lighthouseFetchedAt,
       lcpMs: lcpAuditMs,
       fcpMs: fcpAuditMs,
       cls: clsAudit,

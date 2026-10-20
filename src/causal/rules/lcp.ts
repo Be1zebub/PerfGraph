@@ -65,9 +65,13 @@ export const ttfbLcpChain = {
    * discover or a render-blocking resource to wait for.
    */
   hasStylesheetEvidence(features: FeatureSet): boolean {
-    return features.renderBlocking?.resources?.some(
-      (resource) => resource.resourceType === 'Stylesheet',
-    ) ?? false;
+    const rb = features.renderBlocking;
+    if (!rb) return false;
+    // The merged resource list comes from Lighthouse and carries no resource
+    // type, so the network list has to be checked as well.
+    const hasStylesheet = (resources: Array<{ resourceType?: string }> | undefined) =>
+      resources?.some((resource) => resource.resourceType === 'Stylesheet') ?? false;
+    return hasStylesheet(rb.resources) || hasStylesheet(rb.networkResources);
   },
 
   build(features: FeatureSet): { nodes: CausalNode[]; edges: CausalEdge[] } {

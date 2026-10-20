@@ -133,6 +133,7 @@ function parseLcpCandidate(ev: TraceRawData['events'][number]): LCPCandidate | u
 function buildCoreWebVitals(
   events: TraceRawData['events'],
   anchor: ClockAnchor,
+  mainThreadKey: string,
 ): { coreWebVitals: CoreWebVitals; lcpCandidate?: LCPCandidate; longTasks?: LongTaskStats } {
   let fcp: number | undefined;
   let lcp: number | undefined;
@@ -162,6 +163,11 @@ function buildCoreWebVitals(
         break;
       }
       case 'LongTask': {
+        // Total Blocking Time is defined on the main thread only. A long task
+        // on the font thread or a worker does not block input, so counting it
+        // would inflate the metric.
+        if (`${ev.pid}:${ev.tid}` !== mainThreadKey) break;
+
         // LongTask instant events expose duration in seconds under args;
         // complete trace events may expose dur in microseconds.
         const durationMs = isNumber(ev.dur)
@@ -224,6 +230,30 @@ function collectScriptCompile(events: TraceRawData['events']): ScriptCompileStat
 }
 
 /**
+ * Find the main thread of the trace.
+ *
+ * A thread id is only unique inside a process, so the process is part of the
+ * key. The main thread is the one that produced the most events.
+ */
+function findMainThreadKey(events: TraceRawData['events']): string {
+  const counts = new Map<string, number>();
+  for (const ev of events) {
+    const key = `${ev.pid}:${ev.tid}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  let mainKey = '';
+  let maxCount = 0;
+  for (const [key, count] of counts) {
+    if (count > maxCount) {
+      mainKey = key;
+      maxCount = count;
+    }
+  }
+  return mainKey;
+}
+
+/**
  * Build TraceSummary from all trace events.
  *
  * - totalDuration: difference between last and first event timestamps
@@ -280,26 +310,32 @@ function buildTraceSummary(
   // only unique inside a process, so the process has to be part of the key:
   // events of two processes that happen to share a thread id would otherwise
   // be summed into one thread, reporting more busy time than the page took.
-  const threadCounts = new Map<string, number>();
+  const mainThreadKey = findMainThreadKey(events);
+
+  // Per-category thread activity (on main thread only, inside the window).
+  //
+  // Trace events are nested: a task contains the script it runs, which
+  // contains the function it calls. Summing every duration therefore counts
+  // the same time several times and can report more busy time than the trace
+  // even lasted. Only the outermost events of the thread are counted, which
+  // is the actual occupancy of the main thread.
+  const threadEvents: Array<{ ts: number; dur: number; cat: string }> = [];
   for (const ev of events) {
-    const key = `${ev.pid}:${ev.tid}`;
-    threadCounts.set(key, (threadCounts.get(key) ?? 0) + 1);
-  }
-
-  let mainThreadKey = '';
-  let maxCount = 0;
-  for (const [key, count] of threadCounts) {
-    if (count > maxCount) {
-      mainThreadKey = key;
-      maxCount = count;
+    if (`${ev.pid}:${ev.tid}` !== mainThreadKey || !isNumber(ev.dur) || ev.dur <= 0) {
+      continue;
     }
+    threadEvents.push({ ts: ev.ts, dur: ev.dur, cat: ev.cat });
   }
+  threadEvents.sort((a, b) => a.ts - b.ts);
 
-  // Per-category thread activity (on main thread only, inside the window)
   const byCategory: Record<string, number> = {};
   let mainThreadTotalMs = 0;
-  for (const ev of events) {
-    if (`${ev.pid}:${ev.tid}` !== mainThreadKey || !isNumber(ev.dur)) continue;
+  const ends: number[] = [];
+  for (const ev of threadEvents) {
+    while (ends.length > 0 && (ends[ends.length - 1] ?? 0) <= ev.ts) {
+      ends.pop();
+    }
+    const nested = ends.length > 0;
 
     let durUs = ev.dur;
     if (windowEndMs !== undefined) {
@@ -309,9 +345,13 @@ function buildTraceSummary(
       if (remainingUs < durUs) durUs = Math.max(0, remainingUs);
     }
 
-    const topCat = ev.cat.split(',')[0] ?? 'unknown';
-    byCategory[topCat] = (byCategory[topCat] ?? 0) + durUs / 1000;
-    mainThreadTotalMs += durUs / 1000;
+    if (!nested) {
+      const topCat = ev.cat.split(',')[0] ?? 'unknown';
+      byCategory[topCat] = (byCategory[topCat] ?? 0) + durUs / 1000;
+      mainThreadTotalMs += durUs / 1000;
+    }
+
+    ends.push(ev.ts + ev.dur);
   }
 
   return {
@@ -384,7 +424,12 @@ export function buildPerformanceIR(
   }
 
   const navigation = buildNavigation(events, anchor);
-  const { coreWebVitals, lcpCandidate: traceCandidate, longTasks } = buildCoreWebVitals(events, anchor);
+  const mainThreadKey = findMainThreadKey(events);
+  const { coreWebVitals, lcpCandidate: traceCandidate, longTasks } = buildCoreWebVitals(
+    events,
+    anchor,
+    mainThreadKey,
+  );
 
   // The page lifecycle window: from navigation start to the load event. Work
   // after that point did not block the user.
