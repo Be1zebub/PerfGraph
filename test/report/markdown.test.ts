@@ -79,7 +79,10 @@ describe('buildReportMarkdown', () => {
     };
     const md = buildReportMarkdown(report);
 
-    expect(md).toContain('**Data quality:** partial');
+    // The data-quality section leads the report: a warning there can
+    // invalidate the numbers that follow.
+    expect(md).toContain('## Data quality');
+    expect(md).toContain('Status: partial');
     expect(md).toContain('Measured TBT is unavailable.');
   });
 

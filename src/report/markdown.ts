@@ -93,13 +93,8 @@ export function buildReportMarkdown(
   lines.push(`| Warnings | ${report.summary.warnings} |`);
   lines.push(`| Info | ${report.summary.infos} |`);
   lines.push('');
-  if (report.summary.dataQuality) {
-    lines.push(`**Data quality:** ${report.summary.dataQuality.status}`);
-    for (const warning of report.summary.dataQuality.warnings) {
-      lines.push(`- ${warning}`);
-    }
-    lines.push('');
-  }
+  // The data-quality section is printed at the top of the report, where a
+  // warning can invalidate the numbers that follow.
 
   // -----------------------------------------------------------------------
   // Top Issues
