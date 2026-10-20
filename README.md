@@ -6,7 +6,7 @@
 
 > Real browser metrics → causal degradation graph → actionable report. Built for AI agents, useful for humans.
 
-PerfGraph launches a headless Chromium browser, captures performance data via Chrome DevTools Protocol, runs it through a 5-stage analysis pipeline, and spits out a structured JSON report with issues sorted by severity, causal chains, and prioritized fixes.
+PerfGraph launches a headless Chromium browser, captures performance data via Chrome DevTools Protocol, runs it through a 5-stage analysis pipeline, and produces a structured report with issues sorted by severity, causal chains, and prioritized fixes.
 
 ```bash
 npx perfgraph run --url https://example.com --pretty
@@ -15,7 +15,7 @@ npx perfgraph run --url https://example.com --pretty
 PerfGraph — not a symptom list, a diagnosis.  
 Root cause → impact → fix, in one graph.
 
-**[Add to your AI agent →](#mcp-integration)**
+**[Use from an AI agent →](#ai-agent-workflow)**
 
 ## Why
 
@@ -37,7 +37,7 @@ collect → normalize → extract → analyze → report
 | **Normalize** | Validates raw data through Zod schemas into a unified Intermediate Representation (IRBundle). All timestamps normalized, data cleaned                                                     |
 | **Extract**   | Computes 7 diagnostic feature sets from the IR: LCP breakdown, critical network chain, main-thread blocking time, JS hotspots, layout shifts, third-party overhead, render-blocking score |
 | **Analyze**   | Runs 30+ causal rules against the features, builds a directed graph where edges represent known causal relationships with confidence levels (strong/medium/weak)                          |
-| **Report**    | Produces a self-contained JSON report with issues sorted by severity, causal chains from root cause to user impact, and prioritized recommendations with expected impact estimates        |
+| **Report**    | Produces a structured report (TOON for agents, Markdown for humans) with issues sorted by severity, causal chains from root cause to user impact, and prioritized recommendations with expected impact estimates |
 
 ## Install
 
@@ -51,7 +51,15 @@ Or skip the install:
 npx perfgraph --help
 ```
 
-**Requirements:** Node.js ≥ 22, Chromium (Playwright installs it automatically on first run).
+**Requirements:** Node.js ≥ 22 and Playwright's Chromium build. The browser is
+not downloaded automatically — install it once:
+
+```bash
+npx playwright install chromium
+```
+
+If the binary is missing, PerfGraph fails with the exact expected path instead
+of a cryptic launch error.
 
 ## Quick start
 
@@ -61,7 +69,7 @@ Full pipeline, one command:
 perfgraph run --url https://example.com --pretty
 ```
 
-> **Want to use PerfGraph from your AI agent?** See [MCP integration](#mcp-integration).
+> **Want to use PerfGraph from your AI agent?** See [AI agent workflow](#ai-agent-workflow).
 
 Step by step:
 
@@ -87,6 +95,7 @@ Full pipeline in one shot.
 --runs <n>            Number of collection runs (default: 1).
 --pretty              Pretty-print the final report JSON.
 --device <name>       Mobile emulation (e.g. "iPhone 13").
+--owned-domain <host> Treat an extra hostname as first-party CDN (repeatable).
 --no-lighthouse       Skip Lighthouse collection.
 --no-coverage         Skip JS/CSS coverage.
 --no-console          Skip console log capture.
@@ -136,128 +145,64 @@ Generates the final performance report. Accepts a FeatureSet JSON (from `extract
 --pretty              Pretty-print JSON.
 ```
 
-### `perfgraph mcp`
+## AI agent workflow
 
-Starts an MCP stdio server for AI agent integration. No flags. See [AGENTS.md](AGENTS.md) for details.
-
-## MCP integration
-
-PerfGraph ships as an MCP server. Any AI agent with MCP support can call `perfgraph_analyze` to run the full pipeline and get structured results.
-
-### Add to your agent
-
-Copy the prompt below and paste it into your AI agent (Claude, Codex, Cursor, Copilot, etc.):
-
-```
-Add the PerfGraph MCP server to my configuration. Run:
-
-npx -y perfgraph@latest mcp
-
-This is a stdio MCP server. Add it as a local MCP server with command: npx -y perfgraph@latest mcp
-The server exposes a perfgraph_analyze tool that takes a URL and returns a full performance report.
-```
-
-Use `-y` so the first run does not wait for interactive install confirmation. The first startup can take several seconds while `npx` downloads the package and the server loads its browser-performance dependencies. Configure the MCP client startup timeout to 15 seconds.
-
-For Codex, use:
-
-```toml
-[mcp_servers.perfgraph]
-command = "npx"
-args = ["-y", "perfgraph@latest", "mcp"]
-startup_timeout_sec = 15
-```
-
-### Config snippets
-
-<details>
-<summary>Claude (Desktop / Code / CLI)</summary>
-
-MCP config can live in multiple places. Easiest — dedicated file:
+### 1. Make the CLI available
 
 ```bash
-# create the file if it doesn't exist
-cat > ~/.claude/mcp_servers.json << 'EOF'
-{
-  "perfgraph": {
-    "command": "npx",
-    "args": ["-y", "perfgraph@latest", "mcp"]
-  }
-}
-EOF
+npm install -g perfgraph
+npx playwright install chromium
 ```
 
-Other locations (higher priority overrides lower):
+### 2. Install the skill (optional but recommended)
 
-- `~/.claude.json` — main config
-- `~/.claude/settings.json` — user global
-- `~/.claude/settings.local.json` — user local
-- `.claude/settings.local.json` — project-specific
-- `.mcp.json` — project-scoped, version-controlled
+The package ships an agent skill that describes how to invoke the CLI and how
+to interpret its artifacts. Copy it into your agent's skills directory:
 
-</details>
+```bash
+# OpenCode
+cp -r node_modules/perfgraph/skills/perfgraph ~/.config/opencode/skills/
 
-<details>
-<summary>OpenCode</summary>
-
-Add to `~/.config/opencode/opencode.json` under `"mcp"`:
-
-```json
-{
- "mcp": {
-  "perfgraph": {
-   "type": "local",
-   "command": ["npx", "-y", "perfgraph@latest", "mcp"],
-   "enabled": true
-  }
- }
-}
+# Claude Code
+cp -r node_modules/perfgraph/skills/perfgraph ~/.claude/skills/
 ```
 
-Or project-scoped — `opencode.json` in project root (overrides global).
+In a checkout of this repository the skill lives at
+[`skills/perfgraph/SKILL.md`](skills/perfgraph/SKILL.md), with the metric
+reference in `skills/perfgraph/references/interpretation.md`.
 
-</details>
+### 3. Run the pipeline
 
-<details>
-<summary>Cursor</summary>
-
-Global: `~/.cursor/cli-config.json` (macOS/Linux) or `$env:USERPROFILE\.cursor\cli-config.json` (Windows).
-Project: `<project>/.cursor/cli.json`.
-
-```json
-{
- "mcpServers": {
-  "perfgraph": {
-   "command": "npx",
-   "args": ["-y", "perfgraph@latest", "mcp"]
-  }
- }
-}
+```bash
+perfgraph run --url https://example.com --output ./perfgraph-output --pretty
 ```
 
-</details>
+Read the resulting files progressively:
 
-### What the agent gets
+1. `manifest.toon` — files actually produced;
+2. `insights.toon` — compact triage and top recommendations;
+3. `report.toon` — issues, causal chains, evidence and recommendations;
+4. `report.md` or `graph.toon` — readable diagnosis and causal graph;
+5. raw `trace.json`, `network.json` and `lighthouse.json` only for targeted deep dives.
 
-Once connected, the agent can call `perfgraph_analyze` with a URL and receive:
-
-| Output                           | What's in it                                                         |
-| -------------------------------- | -------------------------------------------------------------------- |
-| `insights.json`                  | Quick summary — scores, LCP element, render-blocking URLs (~5-15 KB) |
-| `report.json`                    | Full report — issues, causal chains, prioritized fixes               |
-| `manifest.json`                  | File index for navigating raw data                                   |
-| `lighthouse.json` / `trace.json` | Deep-dive data (large, read only when needed)                        |
+The agent should summarize the status, show an ASCII causal degradation graph
+for the 1–3 main chains, give 3–5 prioritized actions, and mention confidence,
+warnings and missing data. `.toon` files are text and should not be parsed as
+JSON. The full agent instructions live in
+[`skills/perfgraph/SKILL.md`](skills/perfgraph/SKILL.md).
 
 ## Report format
 
-The report is a single JSON file. Key sections:
+`perfgraph run` writes `report.toon` (compact, agent-facing) and
+`report.md` (human-readable) next to the raw artifacts; the same report object
+is printed as JSON on stdout. Key sections:
 
 ```jsonc
 {
  "meta": {
   "url": "https://example.com",
   "analyzedAt": "2026-06-09T19:15:19.000Z",
-  "reportVersion": "1.0.0",
+  "reportVersion": "1.2.0",
   "featureCount": 7,
   "graphNodeCount": 24,
   "graphEdgeCount": 31,
@@ -286,6 +231,8 @@ The report is a single JSON file. Key sections:
    "unit": "ms",
    "threshold": 2500,
    "confidence": "strong",
+   "basis": "observed",
+   "findingStatus": "confirmed",
    "remediation": "Optimize largest contentful paint element...",
    "chainId": "lcp:3",
   },
@@ -295,12 +242,27 @@ The report is a single JSON file. Key sections:
    "id": "lcp:3",
    "rootCause": "LCP > 2.5s",
    "impact": "Poor user experience",
+   "confidence": "strong",
+   "severity": "critical",
    "path": [
-    "TTFB delayed by server response",
-    "Render-blocking stylesheets",
-    "LCP element render delay",
+    {
+     "nodeId": "ttfb:1",
+     "label": "TTFB delayed by server response",
+     "type": "root-cause",
+     "basis": "observed",
+     "findingStatus": "confirmed",
+     "impactSurface": "page",
+    },
+    {
+     "nodeId": "render-blocking:2",
+     "label": "Render-blocking stylesheets",
+     "type": "bottleneck",
+     "basis": "inferred",
+     "findingStatus": "suspected",
+     "impactSurface": "lcp",
+    },
    ],
-   "length": 3,
+   "length": 2,
   },
  ],
  "recommendations": [
@@ -308,8 +270,12 @@ The report is a single JSON file. Key sections:
    "priority": "critical",
    "category": "LCP",
    "title": "Optimize Largest Contentful Paint",
+   "description": "LCP element is delayed by the render-blocking chain.",
    "action": "Inline critical styles, defer non-critical CSS",
    "expectedImpact": "Reduces LCP by ~40%",
+   "expectedImpactStatus": "estimated",
+   "applicability": "applicable",
+   "verification": "Re-run perfgraph and compare insights.toon LCP",
    "relatedIssues": ["lcp-slow"],
   },
  ],
@@ -335,8 +301,8 @@ The report is a single JSON file. Key sections:
 src/
 ├── index.ts              CLI entry — lazy-loads commands
 ├── collect/              CDP data collection via Playwright
-│   ├── browser.ts        Browser launcher
-│   ├── collector.ts      Orchestrator
+│   ├── session.ts        Browser launcher + CDP session
+│   ├── orchestrator.ts   Collection orchestrator
 │   ├── coverage.ts       JS/CSS coverage
 │   ├── network.ts        Network request capture
 │   ├── performance.ts    Performance API metrics
@@ -354,10 +320,14 @@ src/
 │   ├── scorer.ts         Score computation
 │   ├── remediations.ts   Remediation templates
 │   └── types.ts          Report schema
-├── distill/              Agent-optimized summary layer (insights.json)
-├── mcp/                  MCP stdio server
+├── distill/              Agent-optimized summary layer (insights.toon)
+├── output/               TOON/JSON writers, manifest
 ├── cli/                  CLI command handlers
 └── shared/               Shared utilities & types
+
+skills/perfgraph/         Agent skill + interpretation reference
+scripts/                  Build helpers
+spec/                     Feature specs
 ```
 
 ## Development

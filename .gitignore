@@ -22,3 +22,15 @@
 !AGENTS.md
 !CONTRIBUTING.md
 !assets/
+
+# Project specifications
+!spec/
+!spec/**
+
+# Agent skills
+!skills/
+!skills/**
+
+# Build scripts
+!scripts/
+!scripts/**

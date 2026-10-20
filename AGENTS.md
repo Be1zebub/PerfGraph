@@ -4,7 +4,7 @@ This file tells AI coding agents (Claude, ChatGPT, Copilot, etc.) how to work wi
 
 ## What PerfGraph is
 
-A CLI tool that collects real browser performance data via CDP, runs it through a 5-stage pipeline, and produces a structured JSON report with causal chains and prioritized fixes. Designed to be consumed by AI agents.
+A CLI tool that collects real browser performance data via CDP, runs it through a 5-stage pipeline, and produces a structured report (TOON for agents, Markdown for humans) with causal chains and prioritized fixes. Designed to be consumed by AI agents.
 
 ```
 collect → normalize → extract → analyze → report
@@ -18,33 +18,37 @@ collect → normalize → extract → analyze → report
 npx perfgraph run --url https://example.com --pretty
 ```
 
-This runs the full pipeline. The output is a `report.json` with:
-- `summary.score` — `good` / `moderate` / `poor`
-- `issues[]` — each with severity, confidence, metric value, threshold, remediation
-- `chains[]` — causal degradation paths from root cause to user-facing impact
-- `recommendations[]` — prioritized, with evidence and expected impact
+This runs the full pipeline. The output directory contains:
+- `insights.toon` — compact triage, metrics, warnings, and top recommendations
+- `report.toon` — issues, evidence, causal chains, and prioritized remediation
+- `report.md` — human-readable report
+- `manifest.toon` — artifact index and read order
 
-### MCP mode (for AI agents with MCP support)
+`summary.score` is `good` / `moderate` / `poor` and lives inside `insights.toon`
+and `report.toon`.
+
+The CLI needs Playwright's Chromium build. If it is missing, install it once
+with `npx playwright install chromium` — the CLI reports the expected binary
+path instead of a cryptic launch error.
+
+### AI agent workflow
+
+For a URL plus performance, speed, loading, Core Web Vitals, Lighthouse,
+bottleneck, degradation, or causal-graph request, run:
 
 ```bash
-perfgraph mcp
+perfgraph run --url <url> --output ./perfgraph-output --pretty
 ```
 
-Starts an MCP stdio server. Agents can call `perfgraph_analyze` with a URL and get structured results back. The response includes paths to:
+Read `manifest.toon`, then `insights.toon`, then `report.toon`. Read
+`graph.toon` and raw `trace.json`, `network.json`, or `lighthouse.json` only for
+targeted deep dives. `.toon` files are text, not JSON.
 
-| File | When to read |
-|------|-------------|
-| `insights.json` | **Read first.** Agent-optimized ~5-15 KB summary: Lighthouse scores, LCP element selector, render-blocking URLs, critical path depth |
-| `report.json` | Read for causal chains and prioritized recommendations |
-| `manifest.json` | File index with descriptions. Only needed if you want raw data |
-| `lighthouse.json` / `trace.json` | Deep dives only — these are large |
-
-### Workflow for agents
-
-1. Call `perfgraph_analyze` or run `perfgraph run --url ... --pretty`
-2. Read `insights.json` for the quick picture
-3. Read `report.json` for causal analysis and prioritized fixes
-4. Only open raw files (`lighthouse.json`, `trace.json`, `network.json`) when you need specifics not covered by insights
+The response should contain a short status, the 1–3 main causal chains as an
+ASCII graph, 3–5 prioritized actions, evidence/confidence, warnings, and a
+repeat-measurement plan. Do not treat `Possible INP delay` as measured INP or
+analyze a failed collection as a slow page. See `skills/perfgraph/SKILL.md` for
+the complete interpretation workflow.
 
 ## Diagnostics categories
 
@@ -60,6 +64,7 @@ Starts an MCP stdio server. Agents can call `perfgraph_analyze` with a URL and g
 
 ```bash
 npm install          # install deps
+npm run setup:browser # download Playwright Chromium (one-time)
 npm run build        # compile TypeScript
 npm run typecheck    # type-check only
 npm test             # run tests
@@ -95,4 +100,4 @@ Adding a new rule: create a file in `src/causal/rules/`, register it in `src/cau
 If PerfGraph gives wrong results, file an issue with:
 - The URL tested
 - The command run
-- The `report.json` (or at least the summary section)
+- The `report.toon` (or at least the summary section)
