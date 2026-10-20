@@ -213,10 +213,27 @@ function collectScriptCompile(events: TraceRawData['events']): ScriptCompileStat
 /**
  * Find the main thread of the trace.
  *
- * A thread id is only unique inside a process, so the process is part of the
- * key. The main thread is the one that produced the most events.
+ * The browser names its threads in the trace metadata, and the renderer main
+ * thread is the one the long tasks happen on. Picking the thread with the
+ * most events instead finds a worker on a page that has one, and then every
+ * long task is filtered out.
  */
 function findMainThreadKey(events: TraceRawData['events']): string {
+  const named = new Map<string, string>();
+  for (const ev of events) {
+    if (ev.name !== 'thread_name') continue;
+    const threadName = getArg(ev.args, ['name']);
+    if (typeof threadName !== 'string') continue;
+    const key = `${ev.pid}:${ev.tid}`;
+    if (!named.has(threadName)) named.set(threadName, key);
+  }
+
+  for (const name of ['CrRendererMain', 'RendererMain', 'Main']) {
+    const key = named.get(name);
+    if (key) return key;
+  }
+
+  // Without the metadata, the thread with the most events is the best guess.
   const counts = new Map<string, number>();
   for (const ev of events) {
     const key = `${ev.pid}:${ev.tid}`;
