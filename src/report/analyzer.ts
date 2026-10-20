@@ -450,7 +450,11 @@ export function buildReport(
         .map((other) => other.id),
       applicability: 'applicable',
       evidence: issue.evidence?.urls ?? (issue.evidence?.metric ? [
-        `${issue.evidence.metric.name}: ${issue.evidence.metric.value}${issue.evidence.metric.unit}`,
+        `${issue.evidence.metric.name}: ${issue.evidence.metric.value}${
+        issue.evidence.metric.unit && issue.evidence.metric.unit !== 'count'
+          ? ` ${issue.evidence.metric.unit}`
+          : ''
+      }`,
       ] : undefined),
       verification: 'Repeat the same analysis after the change and compare the cited metric and evidence.',
     });

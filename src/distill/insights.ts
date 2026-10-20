@@ -25,6 +25,22 @@ export interface CriticalPathNode {
   children?: CriticalPathNode[];
 }
 
+/**
+ * A recommendation as it appears in the authoritative report.
+ *
+ * The insights artifact reuses the report's recommendations instead of
+ * building its own list, so an agent reading both artifacts gets the same
+ * answer.
+ */
+export interface ReportRecommendation {
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  title: string;
+  action: string;
+  evidence?: string[];
+  applicability?: 'applicable' | 'not-applicable' | 'insufficient-evidence';
+  verification?: string;
+}
+
 export interface Insights {
   url: string;
   analyzedAt: string;
@@ -105,7 +121,7 @@ export interface Insights {
     warnings: string[];
   };
   topRecommendations: Array<{
-    priority: 'critical' | 'high' | 'medium';
+    priority: 'critical' | 'high' | 'medium' | 'low';
     title: string;
     action: string;
     evidence?: string[];
@@ -176,7 +192,7 @@ function getAuditNumericValue(
 }
 
 /** Extract category scores from Lighthouse. */
-function extractScores(raw: unknown): {
+export function extractLighthouseScores(raw: unknown): {
   performance?: number;
   accessibility?: number;
   bestPractices?: number;
@@ -357,6 +373,15 @@ function buildWarnings(lighthouseJson: unknown, runWarnings?: string[]): string[
   const lhr = getLHRRoot(lighthouseJson);
   if (Array.isArray(lhr.warnings)) {
     for (const w of lhr.warnings) {
+      if (typeof w === 'string') warnings.push(w);
+    }
+  }
+
+  // Lighthouse 13 reports the run-level problems in `runWarnings`: a page
+  // that did not finish loading, a redirect, a failed metric. They decide
+  // whether the Lighthouse numbers can be trusted at all.
+  if (Array.isArray(lhr.runWarnings)) {
+    for (const w of lhr.runWarnings) {
       if (typeof w === 'string') warnings.push(w);
     }
   }
@@ -544,12 +569,13 @@ export function buildInsights(
   features: FeatureSet,
   lighthouseJson: unknown,
   runWarnings?: string[],
+  reportRecommendations?: ReportRecommendation[],
 ): Insights {
   // 1. Parse Lighthouse insight audits
   const lighthouseInsights = buildLighthouseInsights(lighthouseJson);
 
   // 2. Lighthouse scores block
-  const scores = extractScores(lighthouseJson);
+  const scores = extractLighthouseScores(lighthouseJson);
 
   // 3. Navigate to LHR audit container
   const lhr = getLHRRoot(lighthouseJson);
@@ -597,16 +623,21 @@ export function buildInsights(
   // 8. Warnings
   const warnings = buildWarnings(lighthouseJson, runWarnings);
 
-  // 9. Data-driven recommendations
-  const topRecommendations = buildRecommendations({
-    lcpMs,
-    fcpMs,
-    cls,
-    tbtMs,
-    renderBlocking,
-    criticalPath,
-    features,
-  });
+  // 9. Recommendations. The report is the authoritative source, so its
+  // recommendations are reused when they are available. The metric-driven
+  // list is the fallback for a standalone distillation.
+  const topRecommendations =
+    reportRecommendations && reportRecommendations.length > 0
+      ? reportRecommendations
+      : buildRecommendations({
+          lcpMs,
+          fcpMs,
+          cls,
+          tbtMs,
+          renderBlocking,
+          criticalPath,
+          features,
+        });
 
   return {
     url: features.url ?? '',

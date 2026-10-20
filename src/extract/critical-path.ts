@@ -44,10 +44,16 @@ interface WalkResult {
 
 /**
  * Walk the critical path tree recursively and aggregate metrics.
+ *
+ * A URL can appear several times in the dependency tree — a module preload
+ * and the import that follows it are two entries for one file. Counting
+ * those separately inflated the request count and the byte totals, so every
+ * URL is counted once.
  */
 function walkTree(
   node: CriticalPathTreeNode,
   reqMap: Map<string, NormalizedRequest>,
+  seen: Set<string> = new Set(),
 ): WalkResult {
   let totalChainLength = 0;
   let elapsedCriticalPathMs = 0;
@@ -58,7 +64,8 @@ function walkTree(
   let anyMatched = false;
 
   const req = reqMap.get(node.url);
-  if (req) {
+  if (req && !seen.has(node.url)) {
+    seen.add(node.url);
     anyMatched = true;
     const dur = safe(req.duration);
     totalChainLength += dur;
@@ -73,7 +80,7 @@ function walkTree(
   }
 
   for (const child of node.children ?? []) {
-    const childResult = walkTree(child, reqMap);
+    const childResult = walkTree(child, reqMap, seen);
     totalChainLength += childResult.totalChainLength;
     elapsedCriticalPathMs = Math.max(
       elapsedCriticalPathMs,

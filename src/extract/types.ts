@@ -154,6 +154,7 @@ export const RenderBlockingScoreSchema = z.object({
   blockingRequestCount: z.number(),
   blockingBytes: z.number(),
   blockingDuration: z.number(),
+  /** Severity of the render blocking: 1 = the render is heavily blocked */
   renderBlockingScore: z.number().min(0).max(1),
   lhRenderBlockingMs: z.number().optional(),
   lcpSavingsMs: z.number().optional(),

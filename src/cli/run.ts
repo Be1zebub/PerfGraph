@@ -19,7 +19,7 @@ import { loadRunDir } from '../shared/fs-utils.js';
 import { normalize } from '../normalize/index.js';
 import type { IRBundle } from '../normalize/types.js';
 import { extract } from '../extract/index.js';
-import { buildInsights } from '../distill/insights.js';
+import { buildInsights, extractLighthouseScores } from '../distill/insights.js';
 import {
   buildNetworkSummary,
   buildLighthouseSummary,
@@ -164,15 +164,6 @@ export async function runRun(
   // -----------------------------------------------------------------------
   const features = extract(ir);
 
-  // Write extracted features
-  featuresFile = resolve(runDir, 'features.toon');
-  writeFileSync(featuresFile, await convertToon(features), 'utf-8');
-
-  // Build and write insights.toon
-  const insights = buildInsights(features, raw.lighthouse ?? {}, raw.warnings);
-  insightsFile = resolve(runDir, 'insights.toon');
-  writeFileSync(insightsFile, await convertToon(insights), 'utf-8');
-
   // -----------------------------------------------------------------------
   // 4. Analyze (causal graph)
   // -----------------------------------------------------------------------
@@ -188,7 +179,28 @@ export async function runRun(
   // Keep the report score aligned with the Lighthouse score already exposed
   // in insights. Without this argument, a warning-only causal graph can
   // downgrade an otherwise green Lighthouse run to MODERATE.
-  const report = buildReport(graph, features, insights.lighthouse.performance, raw.warnings);
+  const lighthousePerformance = extractLighthouseScores(raw.lighthouse ?? {}).performance;
+  const report = buildReport(graph, features, lighthousePerformance, raw.warnings);
+
+  // -----------------------------------------------------------------------
+  // 6. Insights
+  // -----------------------------------------------------------------------
+  // The insights reuse the report's recommendations so that both artifacts
+  // give an agent the same answer.
+  const insights = buildInsights(
+    features,
+    raw.lighthouse ?? {},
+    raw.warnings,
+    report.recommendations,
+  );
+
+  // Write extracted features
+  featuresFile = resolve(runDir, 'features.toon');
+  writeFileSync(featuresFile, await convertToon(features), 'utf-8');
+
+  // Write insights.toon
+  insightsFile = resolve(runDir, 'insights.toon');
+  writeFileSync(insightsFile, await convertToon(insights), 'utf-8');
 
   // Write report as .toon (AI consumption) + keep JSON for stdout
   const reportFile = resolve(runDir, 'report.toon');

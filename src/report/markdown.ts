@@ -67,6 +67,22 @@ export function buildReportMarkdown(
   lines.push('');
 
   // -----------------------------------------------------------------------
+  // Data quality
+  // -----------------------------------------------------------------------
+  // A warning here can invalidate the numbers above, so it comes before them.
+  const quality = report.summary.dataQuality;
+  if (quality && quality.warnings.length > 0) {
+    lines.push('## Data quality');
+    lines.push('');
+    lines.push(`Status: ${quality.status}`);
+    lines.push('');
+    for (const warning of quality.warnings) {
+      lines.push(`- ${warning}`);
+    }
+    lines.push('');
+  }
+
+  // -----------------------------------------------------------------------
   // Summary stats
   // -----------------------------------------------------------------------
   lines.push('## Summary');

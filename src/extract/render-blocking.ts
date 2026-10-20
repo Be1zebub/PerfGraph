@@ -18,10 +18,18 @@ const BLOCKING_TYPES = new Set(['Stylesheet']);
  * - Stylesheets are render-blocking by default.
  * - Scripts at VeryHigh priority are considered blocking.
  * - Font preloads and other early-critical resources could be added here.
+ *
+ * A stylesheet only blocks the render if it was requested before the first
+ * paint. Route stylesheets that the app loads after the first render do not
+ * delay anything, and counting them made the report blame the page for
+ * resources that never blocked it.
  */
-function isRenderBlocking(req: NormalizedRequest): boolean {
+function isRenderBlocking(req: NormalizedRequest, firstPaintMs?: number): boolean {
   if (req.failed) return false;
-  if (BLOCKING_TYPES.has(req.resourceType)) return true;
+  if (BLOCKING_TYPES.has(req.resourceType)) {
+    if (firstPaintMs === undefined) return true;
+    return req.startTime <= firstPaintMs;
+  }
   if (req.resourceType === 'Script' && req.priority === 'VeryHigh') return true;
   return false;
 }
@@ -42,12 +50,15 @@ export function extractRenderBlocking(ir: IRBundle): RenderBlockingScore | undef
   const requests = ir.network.requests;
   if (requests.length === 0) return undefined;
 
+  // The first paint is the deadline a render-blocking resource has to meet.
+  const firstPaintMs = ir.performance.coreWebVitals.fcp;
+
   let blockingRequestCount = 0;
   let blockingBytes = 0;
   let blockingDuration = 0;
 
   for (const req of requests) {
-    if (isRenderBlocking(req)) {
+    if (isRenderBlocking(req, firstPaintMs)) {
       blockingRequestCount++;
       blockingBytes += safe(req.bytes);
       blockingDuration += safe(req.duration);
@@ -63,22 +74,24 @@ export function extractRenderBlocking(ir: IRBundle): RenderBlockingScore | undef
     : undefined;
   const lcpSavingsMs = ir.lighthouse.renderBlockingLcpSavingsMs;
 
-  // Score: 0 = lots of blocking, 1 = no blocking
-  // Blend count (up to 20 resources = max penalty) and Lighthouse value
-  const countScore = Math.max(0, 1 - blockingRequestCount / 20);
-  const lhScore = lhAudit !== undefined && lhAudit.score !== undefined && Number.isFinite(lhAudit.score)
-    ? lhAudit.score
-    : undefined;
-  const renderBlockingScore = lhScore !== undefined
-    ? (countScore + lhScore) / 2
-    : countScore;
+  // Severity score: 1 = the render is heavily blocked, 0 = nothing blocks it.
+  // The count is scaled so that 20 blocking resources saturate the scale, and
+  // Lighthouse's pass score is inverted for the same reason. Mixing the two
+  // directions is what made a page with seven stylesheets look critical while
+  // a page with one looked fine.
+  const countSeverity = Math.min(1, blockingRequestCount / 20);
+  const lhSeverity =
+    lhAudit !== undefined && lhAudit.score !== undefined && Number.isFinite(lhAudit.score)
+      ? 1 - lhAudit.score
+      : undefined;
+  const renderBlockingScore = Math.max(countSeverity, lhSeverity ?? 0);
 
   // Use Lighthouse insight data for URL-level details, but never allow a
   // document entry to re-introduce the old false-positive classification.
   const lighthouseResources = ir.lighthouse.renderBlockingResources
     ?.filter((resource) => resource.resourceType !== 'Document');
   const networkResources = requests
-    .filter(isRenderBlocking)
+    .filter((request) => isRenderBlocking(request, firstPaintMs))
     .map((request) => ({
       url: request.url,
       totalBytes: safe(request.bytes),

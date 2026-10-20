@@ -50,7 +50,7 @@ describe('extractRenderBlocking', () => {
     expect(result!.blockingBytes).toBe(10000 + 30000); // 40000
     expect(result!.blockingDuration).toBe(100 + 200); // 300
     // Score: countScore = 1 - 2/20 = 0.9, no LH audit → score = 0.9
-    expect(result!.renderBlockingScore).toBeCloseTo(0.9, 5);
+    expect(result!.renderBlockingScore).toBeCloseTo(0.1, 5);
     expect(result!.resources?.some((resource) => resource.resourceType === 'Document')).toBe(false);
     expect(result!.lhRenderBlockingMs).toBeUndefined();
   });
@@ -76,7 +76,7 @@ describe('extractRenderBlocking', () => {
     expect(result!.blockingRequestCount).toBe(1);
     expect(result!.lhRenderBlockingMs).toBe(870);
     // countScore = 1 - 1/20 = 0.95, lhScore = 0.5, blend = (0.95 + 0.5)/2 = 0.725
-    expect(result!.renderBlockingScore).toBeCloseTo(0.725, 5);
+    expect(result!.renderBlockingScore).toBeCloseTo(0.5, 5);
   });
 
   it('includes resources and totalWastedMs from Lighthouse renderBlockingResources', () => {
@@ -120,7 +120,7 @@ describe('extractRenderBlocking', () => {
     const result = extractRenderBlocking(ir);
     expect(result).toBeDefined();
     expect(result!.blockingRequestCount).toBe(0);
-    expect(result!.renderBlockingScore).toBe(1);
+    expect(result!.renderBlockingScore).toBe(0);
   });
 
   it('ignores failed requests', () => {

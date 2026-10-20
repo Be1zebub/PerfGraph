@@ -17,10 +17,31 @@ function clamp(value: number): number {
 type LcpElementKind = 'text' | 'image' | 'unknown';
 
 /**
- * Find the Document request (first page navigation) from the network log.
+ * Find the document request the page metrics belong to.
+ *
+ * A redirect chain produces several document requests, and the metrics are
+ * anchored to the final navigation. Taking the first document would compare
+ * a TTFB from one navigation with an LCP from another — and produce a TTFB
+ * larger than the LCP, which is impossible for a single page load.
  */
-function findDocumentRequest(requests: NormalizedRequest[]): NormalizedRequest | undefined {
-  return requests.find((r) => r.resourceType === 'Document');
+function findDocumentRequest(
+  requests: NormalizedRequest[],
+  anchorMs?: number,
+): NormalizedRequest | undefined {
+  const documents = requests.filter((r) => r.resourceType === 'Document');
+  if (documents.length === 0) return undefined;
+  if (documents.length === 1) return documents[0];
+
+  if (anchorMs !== undefined) {
+    // The document that was in flight when the page painted.
+    const before = documents.filter((r) => r.startTime <= anchorMs);
+    if (before.length > 0) {
+      return before.reduce((a, b) => (a.startTime >= b.startTime ? a : b));
+    }
+  }
+
+  // Otherwise the last document is the navigation that produced the page.
+  return documents.reduce((a, b) => (a.startTime >= b.startTime ? a : b));
 }
 
 /**
@@ -182,9 +203,12 @@ function findLcpResource(
  * The parts are kept as well: most of a slow TTFB is connection setup rather
  * than server processing, and the recommendation has to reflect that.
  */
-function extractTTFB(ir: IRBundle): { total: number; parts?: LCPBreakdown['ttfbParts'] } {
+function extractTTFB(
+  ir: IRBundle,
+  anchorMs?: number,
+): { total: number; parts?: LCPBreakdown['ttfbParts'] } {
   // Primary: Document request timing
-  const doc = findDocumentRequest(ir.network.requests);
+  const doc = findDocumentRequest(ir.network.requests, anchorMs);
   if (doc?.timing) {
     const { dns = 0, connect = 0, ssl = 0, wait = 0 } = doc.timing;
     const ttfb = dns + connect + ssl + wait;
@@ -235,7 +259,7 @@ export function extractLCPBreakdown(ir: IRBundle): LCPBreakdown | undefined {
       ? 'trace'
       : 'lighthouse';
 
-  const { total: ttfb, parts: ttfbParts } = extractTTFB(ir);
+  const { total: ttfb, parts: ttfbParts } = extractTTFB(ir, totalLCP);
   const { kind, element, urlHint } = resolveLcpElement(ir, source);
   const lcpResource = findLcpResource(ir, kind, urlHint);
   const entry = ir.performance.lcpEntry;

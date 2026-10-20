@@ -251,10 +251,23 @@ function buildTraceSummary(
     };
   }
 
-  const firstTs = events[0]?.ts ?? 0;
-  const lastTs = events[events.length - 1]?.ts ?? 0;
+  // The trace starts with metadata events that carry no timestamp (ts = 0),
+  // and it ends long after the page settled. The span is taken from the
+  // events that actually have a timestamp, otherwise the duration is off by
+  // orders of magnitude and every ratio computed from it collapses.
+  let firstTs = Number.POSITIVE_INFINITY;
+  let lastTs = 0;
+  for (const ev of events) {
+    if (!isNumber(ev.ts) || ev.ts <= 0) continue;
+    if (ev.ts < firstTs) firstTs = ev.ts;
+    if (ev.ts > lastTs) lastTs = ev.ts;
+  }
 
-  const totalDuration = toRelativeMs(lastTs, 'cdp-monotonic-us', anchor) - toRelativeMs(firstTs, 'cdp-monotonic-us', anchor);
+  const totalDuration =
+    Number.isFinite(firstTs) && lastTs > firstTs
+      ? toRelativeMs(lastTs, 'cdp-monotonic-us', anchor) -
+        toRelativeMs(firstTs, 'cdp-monotonic-us', anchor)
+      : 0;
 
   // Count events per top-level category
   const categories: Record<string, number> = {};
@@ -398,10 +411,13 @@ export function buildPerformanceIR(
     lcpCandidate = candidateFromEntry(lcp);
   }
 
-  // mainThreadBusyness = main thread activity / total trace duration
+  // Busyness is the share of the page lifecycle the main thread was busy.
+  // Using the whole trace span instead would dilute the number with
+  // everything that happened after the page settled.
+  const windowMs = traceSummary.threadActivity.windowMs ?? traceSummary.totalDuration;
   const mainThreadBusyness =
-    traceSummary.totalDuration > 0 && traceSummary.threadActivity.totalMs > 0
-      ? Math.min(1, traceSummary.threadActivity.totalMs / traceSummary.totalDuration)
+    windowMs > 0 && traceSummary.threadActivity.totalMs > 0
+      ? Math.min(1, traceSummary.threadActivity.totalMs / windowMs)
       : 0;
 
   const result: PerformanceIR = {
