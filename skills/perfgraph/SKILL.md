@@ -19,12 +19,13 @@ Prefer the installed `perfgraph` command:
 perfgraph run --url <url> --output ./perfgraph-output --pretty
 ```
 
-Use `--runs 1` for a normal diagnostic. Use `--runs 3` or more only when the
-user needs variability information and can tolerate the extra runtime — the
+Use `--runs 1` for a quick look, and `--runs 3` when the question is why
+something is slow. The first run is often an outlier — a cold JIT, a cold
+DNS, a cold connection — so a single run can be several times worse than the
+page normally is, and a fix aimed at that outlier is aimed at nothing. The
 per-run metrics and their spread land in `runs-summary.json` next to the run
-directories, with min, max, mean, median and standard deviation. A cold first
-run is often an outlier, so the median is the number to quote. Use
-`--device "iPhone 13"` for mobile emulation. Optional collectors can be
+directories, with min, max, mean, median and standard deviation. Quote the
+median. Use `--device "iPhone 13"` for mobile emulation. Optional collectors can be
 disabled with `--no-lighthouse`, `--no-coverage`, `--no-console`, and `--no-dom`.
 
 If the command is not installed but this repository is available, use the
