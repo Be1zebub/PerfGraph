@@ -7,7 +7,7 @@
  */
 
 import type { TraceRawData, PerformanceRawData } from '../collect/types.js';
-import type { PerformanceIR, CoreWebVitals, LCPEntry, LCPCandidate, TraceSummary, ThreadActivity, PerformanceNavigation } from './types.js';
+import type { PerformanceIR, CoreWebVitals, LCPEntry, LCPCandidate, LongTaskStats, ScriptCompileStats, TraceSummary, ThreadActivity, PerformanceNavigation } from './types.js';
 import { toRelativeMs } from './clock.js';
 import type { ClockDomain, ClockAnchor } from './clock.js';
 
@@ -133,12 +133,14 @@ function parseLcpCandidate(ev: TraceRawData['events'][number]): LCPCandidate | u
 function buildCoreWebVitals(
   events: TraceRawData['events'],
   anchor: ClockAnchor,
-): { coreWebVitals: CoreWebVitals; lcpCandidate?: LCPCandidate } {
+): { coreWebVitals: CoreWebVitals; lcpCandidate?: LCPCandidate; longTasks?: LongTaskStats } {
   let fcp: number | undefined;
   let lcp: number | undefined;
   let cls = 0;
   let tbt = 0;
   let lcpCandidate: LCPCandidate | undefined;
+  let longTaskCount = 0;
+  let maxBlockingMs = 0;
 
   for (const ev of events) {
     switch (ev.name) {
@@ -170,7 +172,11 @@ function buildCoreWebVitals(
             })();
         if (durationMs !== undefined) {
           const blocking = durationMs - 50;
-          if (blocking > 0) tbt += blocking;
+          if (blocking > 0) {
+            tbt += blocking;
+            longTaskCount++;
+            if (blocking > maxBlockingMs) maxBlockingMs = blocking;
+          }
         }
         break;
       }
@@ -185,12 +191,37 @@ function buildCoreWebVitals(
       tbt: tbt > 0 ? tbt : undefined,
     },
     lcpCandidate,
+    longTasks:
+      longTaskCount > 0
+        ? { count: longTaskCount, maxBlockingMs, totalBlockingMs: tbt }
+        : undefined,
   };
 }
 
 // ---------------------------------------------------------------------------
 // Trace summary builder
 // ---------------------------------------------------------------------------
+
+/**
+ * Sum the duration of the V8 compile events.
+ *
+ * These are the browser's own compilation events, so the result is a real
+ * measurement of script compilation instead of a guess.
+ */
+function collectScriptCompile(events: TraceRawData['events']): ScriptCompileStats | undefined {
+  let totalMs = 0;
+  let count = 0;
+
+  for (const ev of events) {
+    if (!/^(V8|v8)\.Compile/.test(ev.name)) continue;
+    if (!isNumber(ev.dur)) continue;
+    totalMs += ev.dur / 1000;
+    count++;
+  }
+
+  if (count === 0) return undefined;
+  return { totalMs, count };
+}
 
 /**
  * Build TraceSummary from all trace events.
@@ -346,7 +377,7 @@ export function buildPerformanceIR(
   }
 
   const navigation = buildNavigation(events, anchor);
-  const { coreWebVitals, lcpCandidate: traceCandidate } = buildCoreWebVitals(events, anchor);
+  const { coreWebVitals, lcpCandidate: traceCandidate, longTasks } = buildCoreWebVitals(events, anchor);
 
   // The page lifecycle window: from navigation start to the load event. Work
   // after that point did not block the user.
@@ -357,6 +388,7 @@ export function buildPerformanceIR(
       : undefined;
 
   const traceSummary = buildTraceSummary(events, anchor, windowEndMs);
+  const scriptCompile = collectScriptCompile(events);
 
   // The Performance API entry is the final LCP candidate, so it wins over the
   // trace, which may only carry the first candidate after navigation.
@@ -375,6 +407,8 @@ export function buildPerformanceIR(
   const result: PerformanceIR = {
     navigation,
     coreWebVitals,
+    longTasks,
+    scriptCompile,
     lcpEntry: lcp,
     lcpCandidate,
     traceSummary,

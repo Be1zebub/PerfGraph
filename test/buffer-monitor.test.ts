@@ -94,7 +94,7 @@ describe('validateTraceCompleteness', () => {
     'navigationStart',
     'firstContentfulPaint',
     'firstPaint',
-    'LargestContentfulPaint',
+    'largestContentfulPaint::Candidate',
   ];
 
   it('returns no warnings when all critical events are present', () => {
@@ -106,7 +106,7 @@ describe('validateTraceCompleteness', () => {
     const warnings = validateTraceCompleteness([
       'navigationStart',
       'firstContentfulPaint',
-      'LargestContentfulPaint',
+      'largestContentfulPaint::Candidate',
     ]);
     expect(warnings.length).toBe(1);
     expect(warnings[0]).toContain('missing expected events');

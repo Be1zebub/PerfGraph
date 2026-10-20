@@ -30,6 +30,24 @@ describe('extractThirdPartyOverhead', () => {
     expect(result).toBeUndefined();
   });
 
+  it('ignores inline data URIs, which have no origin and no network cost', () => {
+    const ir = makeIRBundle({
+      network: {
+        requests: [
+          { url: 'https://example.com/', method: 'GET', resourceType: 'Document', statusCode: 200, startTime: 0, endTime: 100, duration: 100, bytes: 5000, priority: 'VeryHigh', initiator: '', failed: false, timing: {} },
+          { url: 'data:image/svg+xml,%3Csvg%3E', method: 'GET', resourceType: 'Image', statusCode: 200, startTime: 100, endTime: 100, duration: 0, bytes: 0, priority: 'Low', initiator: '', failed: false, timing: {} },
+        ],
+        summary: { totalRequests: 2, totalBytes: 5000, byType: { Document: 1, Image: 1 }, byPriority: { VeryHigh: 1, Low: 1 }, criticalPath: { tree: { url: '' }, depth: 0, urlsOnLongestPath: [] }, longestChain: { url: '', length: 0 } },
+      },
+    });
+    const result = extractThirdPartyOverhead(ir);
+    expect(result).toBeDefined();
+    expect(result!.totalThirdPartyRequests).toBe(0);
+    expect(result!.firstPartyRequests).toBe(1);
+    expect(result!.thirdPartyRatio).toBe(0);
+    expect(result!.byOwnership?.['unknown']).toBeUndefined();
+  });
+
   it('classifies first-party vs third-party requests', () => {
     const ir = makeIRBundle({
       network: {

@@ -221,31 +221,35 @@ export const excessiveScriptsChain = {
 
   applies(features: FeatureSet): boolean {
     const js = features.jsHotspots;
-    return js != null && js.evaluatedScripts >= EVALUATED_SCRIPTS_WARN;
+    return js != null && (js.scriptCount ?? 0) >= EVALUATED_SCRIPTS_WARN;
   },
 
   build(features: FeatureSet): { nodes: CausalNode[]; edges: CausalEdge[] } {
     const js = features.jsHotspots!;
-    const conf = confidenceFromDelta(js.evaluatedScripts, EVALUATED_SCRIPTS_WARN, EVALUATED_SCRIPTS_CRIT);
-    const isHeavy = js.bootupTime >= BOOTUP_CRIT;
+    const scriptCount = js.scriptCount ?? 0;
+    const compileTimeMs = js.compileTimeMs ?? 0;
+    const conf = confidenceFromDelta(scriptCount, EVALUATED_SCRIPTS_WARN, EVALUATED_SCRIPTS_CRIT);
+    const isHeavy = compileTimeMs >= BOOTUP_CRIT;
 
     const nodes: CausalNode[] = [
       {
         id: 'many-scripts',
-        label: `${js.evaluatedScripts} scripts`,
+        label: `${scriptCount} scripts`,
         type: 'metric',
         severity: isHeavy ? 'critical' : 'warning',
-        value: js.evaluatedScripts,
+        value: scriptCount,
         threshold: EVALUATED_SCRIPTS_WARN,
+        impactSurface: 'total-page',
       },
       {
         id: 'long-parse-time',
-        label: `Long parse/compile time (${Math.round(js.bootupTime)}ms)`,
+        label: `Long parse/compile time (${Math.round(compileTimeMs)}ms)`,
         type: 'bottleneck',
         severity: 'warning',
-        value: js.bootupTime,
+        value: compileTimeMs,
         unit: 'ms',
         threshold: BOOTUP_WARN,
+        impactSurface: 'total-page',
       },
     ];
 

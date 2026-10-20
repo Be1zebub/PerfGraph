@@ -19,12 +19,21 @@ const WARN_THRESHOLD = 0.8;
 /** Critical warnings are emitted when peak usage exceeds this fraction (95%) */
 const CRITICAL_THRESHOLD = 0.95;
 
-/** Event names that should typically appear in a complete trace */
+/**
+ * Event names that should typically appear in a complete trace.
+ *
+ * Some of them have more than one spelling: Chrome emits the largest
+ * contentful paint candidate as `largestContentfulPaint::Candidate`, so a
+ * trace that only carries that name is complete.
+ */
 const CRITICAL_TRACE_EVENTS = [
-  'navigationStart',
-  'firstContentfulPaint',
-  'firstPaint',
-  'LargestContentfulPaint',
+  { label: 'navigationStart', names: ['navigationStart'] },
+  { label: 'firstContentfulPaint', names: ['firstContentfulPaint'] },
+  { label: 'firstPaint', names: ['firstPaint'] },
+  {
+    label: 'LargestContentfulPaint',
+    names: ['largestContentfulPaint::Candidate', 'LargestContentfulPaint::Candidate'],
+  },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -72,9 +81,9 @@ export function validateTraceCompleteness(eventNames: string[] | Set<string>): s
   const present = eventNames instanceof Set ? eventNames : new Set(eventNames);
   const missing: string[] = [];
 
-  for (const eventName of CRITICAL_TRACE_EVENTS) {
-    if (!present.has(eventName)) {
-      missing.push(eventName);
+  for (const event of CRITICAL_TRACE_EVENTS) {
+    if (!event.names.some((name) => present.has(name))) {
+      missing.push(event.label);
     }
   }
 

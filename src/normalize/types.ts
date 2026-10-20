@@ -48,6 +48,29 @@ export const CoreWebVitalsSchema = z.object({
 });
 
 /**
+ * Long tasks measured from the trace.
+ *
+ * These come from the browser's own `LongTask` events, which is the same
+ * source as the measured TBT — unlike a gap between two console messages,
+ * which says nothing about blocking.
+ */
+export const LongTaskStatsSchema = z.object({
+  count: z.number(),
+  maxBlockingMs: z.number(),
+  totalBlockingMs: z.number(),
+});
+export type LongTaskStats = z.infer<typeof LongTaskStatsSchema>;
+
+/**
+ * Script compilation measured from the V8 compile trace events.
+ */
+export const ScriptCompileSchema = z.object({
+  totalMs: z.number(),
+  count: z.number(),
+});
+export type ScriptCompileStats = z.infer<typeof ScriptCompileSchema>;
+
+/**
  * The largest contentful paint entry reported by the Performance API.
  *
  * Unlike the trace candidate this is the final entry: the Performance API
@@ -100,6 +123,8 @@ export const TraceSummarySchema = z.object({
 export const PerformanceIRSchema = z.object({
   navigation: PerformanceNavigationSchema,
   coreWebVitals: CoreWebVitalsSchema,
+  longTasks: LongTaskStatsSchema.optional(),
+  scriptCompile: ScriptCompileSchema.optional(),
   lcpEntry: LCPEntrySchema.optional(),
   lcpCandidate: LCPCandidateSchema.optional(),
   traceSummary: TraceSummarySchema,

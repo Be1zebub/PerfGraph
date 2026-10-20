@@ -30,6 +30,8 @@ export interface RemediationContext {
   ruleId?: string;
   /** Resource kind of the LCP element, used to avoid image-only advice for text. */
   lcpResourceType?: string;
+  /** URL of the LCP resource, used to detect inline resources with nothing to download. */
+  lcpElementUrl?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -237,6 +239,12 @@ export function getRemediation(
 
     // Increased LCP with value
     if (issueId === 'increased-lcp' && context.value != null) {
+      const url = context.lcpElementUrl ?? '';
+      // An inline resource is already in the document: there is nothing to
+      // download, preload or re-encode.
+      if (url.startsWith('data:') || url.startsWith('blob:')) {
+        return `LCP is high (${context.value}ms) and the LCP element is an inline resource, so there is nothing to download or re-encode. Reduce the render delay instead: main-thread work, blocking styles and scripts before the first paint.`;
+      }
       if (context.lcpResourceType && !context.lcpResourceType.toLowerCase().includes('image')) {
         return `LCP is high (${context.value}ms) and the LCP element is not an image. Reduce render delay, main-thread work, and blocking styles/scripts instead of applying image optimization advice.`;
       }

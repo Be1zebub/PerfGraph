@@ -384,15 +384,21 @@ function buildRecommendations(
   const recs: Insights['topRecommendations'] = [];
 
   const lcpIsImage = input.features.lcpBreakdown?.lcpResourceType?.toLowerCase().includes('image') ?? false;
+  const lcpUrl = input.features.lcpBreakdown?.lcpElementUrl ?? '';
+  // An inline resource is already in the document — there is nothing to
+  // download, preload or re-encode, so image advice would be misleading.
+  const lcpIsInline = lcpUrl.startsWith('data:') || lcpUrl.startsWith('blob:');
 
   // Critical: LCP > 4000ms
   if (input.lcpMs !== undefined && input.lcpMs > 4000) {
     recs.push({
       priority: 'critical',
       title: 'Optimize Largest Contentful Paint',
-      action: lcpIsImage
-        ? 'Reduce LCP by optimizing server response time, removing render-blocking work, and prioritizing the LCP image.'
-        : 'Reduce LCP by optimizing server response time, removing render-blocking work, and reducing the LCP element render delay.',
+      action: lcpIsInline
+        ? 'Reduce LCP by optimizing server response time, removing render-blocking work, and reducing the LCP element render delay. The LCP element is an inline resource, so there is nothing to download or re-encode.'
+        : lcpIsImage
+          ? 'Reduce LCP by optimizing server response time, removing render-blocking work, and prioritizing the LCP image.'
+          : 'Reduce LCP by optimizing server response time, removing render-blocking work, and reducing the LCP element render delay.',
       evidence: [`LCP: ${input.lcpMs}ms`],
     });
   }

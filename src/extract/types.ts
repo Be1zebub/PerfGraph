@@ -85,11 +85,17 @@ export const MainThreadBlockingSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const JSHotspotsSchema = z.object({
-  bootupTime: z.number(),
-  evaluatedScripts: z.number(),
+  bootupTime: z.number().optional(),
+  evaluatedScripts: z.number().optional(),
   longTaskCount: z.number(),
   maxBlockingDuration: z.number(),
   contextCount: z.number(),
+  /** Number of script responses loaded by the page */
+  scriptCount: z.number().optional(),
+  /** Total script compilation time measured from the V8 compile trace events */
+  compileTimeMs: z.number().optional(),
+  /** Where the long-task numbers came from */
+  source: z.enum(['trace', 'console-gap', 'none']).optional(),
 });
 
 // ---------------------------------------------------------------------------

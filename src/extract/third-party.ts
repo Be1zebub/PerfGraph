@@ -62,6 +62,17 @@ function getOrigin(url: string): string | null {
 }
 
 /**
+ * Whether a request left the page over the network.
+ *
+ * Inline data URIs, blob URLs and about:blank have no origin and no server
+ * round trip, so counting them as third-party traffic inflates the ratio
+ * without any corresponding cost.
+ */
+function isNetworkRequest(url: string): boolean {
+  return url.startsWith('http://') || url.startsWith('https://');
+}
+
+/**
  * Categorise a third-party hostname into a known bucket.
  */
 function categoriseHostname(hostname: string): string {
@@ -105,6 +116,7 @@ export function extractThirdPartyOverhead(ir: IRBundle): ThirdPartyOverhead | un
   let firstPartyRequests = 0;
 
   for (const req of requests) {
+    if (!isNetworkRequest(req.url)) continue;
     const origin = getOrigin(req.url);
     if (!origin) continue;
 

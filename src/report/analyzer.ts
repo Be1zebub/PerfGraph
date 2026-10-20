@@ -356,6 +356,7 @@ export function buildReport(
         ruleId,
         lcpResourceType: features?.lcpBreakdown?.lcpResourceType
           ?? features?.lcpBreakdown?.lcpElement?.nodeLabel,
+        lcpElementUrl: features?.lcpBreakdown?.lcpElementUrl,
       }),
       chainId: nodeToChain.get(node.id) ?? 'standalone',
       evidence: node.evidence,
