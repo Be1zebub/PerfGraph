@@ -1,6 +1,6 @@
 {
 	"name": "perfgraph",
-	"version": "0.1.2",
+	"version": "0.2.0",
 	"type": "module",
 	"description": "CDP-powered perf CLI — causal degradation graphs, not just Lighthouse scores",
 	"license": "MIT",
@@ -35,7 +35,9 @@
 		"cls",
 		"performance",
 		"profiler",
-		"diagnostics"
+		"diagnostics",
+		"ai-agent",
+		"skill"
 	],
 	"scripts": {
 		"build": "npm run clean:dist && tsc",
