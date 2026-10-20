@@ -20,7 +20,10 @@ perfgraph run --url <url> --output ./perfgraph-output --pretty
 ```
 
 Use `--runs 1` for a normal diagnostic. Use `--runs 3` or more only when the
-user needs variability information and can tolerate the extra runtime. Use
+user needs variability information and can tolerate the extra runtime — the
+per-run metrics and their spread land in `runs-summary.json` next to the run
+directories, with min, max, mean, median and standard deviation. A cold first
+run is often an outlier, so the median is the number to quote. Use
 `--device "iPhone 13"` for mobile emulation. Optional collectors can be
 disabled with `--no-lighthouse`, `--no-coverage`, `--no-console`, and `--no-dom`.
 
