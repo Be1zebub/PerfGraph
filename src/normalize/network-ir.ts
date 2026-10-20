@@ -46,6 +46,55 @@ function computeTiming(
 }
 
 /**
+ * Response headers worth reporting.
+ *
+ * They answer questions the timings cannot: whether the HTML is cached at
+ * the edge, how it is encoded, whether the connection can be upgraded. An
+ * agent would otherwise have to fetch the page again with curl to find them.
+ */
+const INTERESTING_RESPONSE_HEADERS = [
+  // caching
+  'cache-control',
+  'expires',
+  'age',
+  'etag',
+  'last-modified',
+  'vary',
+  's-maxage',
+  'cf-cache-status',
+  'x-cache',
+  'x-cache-hits',
+  // encoding and size
+  'content-encoding',
+  'content-length',
+  'content-type',
+  // connection and protocol hints
+  'alt-svc',
+  'server',
+  'server-timing',
+  'via',
+  // client hints
+  'link',
+  'report-to',
+  'nel',
+  'strict-transport-security',
+] as const;
+
+/** Pick the performance-relevant headers of a response. */
+function pickResponseHeaders(
+  headers: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+  if (!headers) return undefined;
+
+  const picked: Record<string, string> = {};
+  for (const name of INTERESTING_RESPONSE_HEADERS) {
+    const value = headers[name] ?? headers[name.toUpperCase()];
+    if (typeof value === 'string') picked[name] = value;
+  }
+  return Object.keys(picked).length > 0 ? picked : undefined;
+}
+
+/**
  * Build a critical-path initiator dependency tree from normalized requests.
  *
  * Uses CDP `initiator.url` to build a parent-child tree. The Document
@@ -83,16 +132,22 @@ function buildCriticalPathInfo(requests: NormalizedRequest[]): CriticalPathInfo 
     childrenOf.set(parentUrl, existing);
   }
 
-  // Recursively build tree nodes and find longest path
-  function buildNode(url: string, depth: number): { node: CriticalPathTreeNode; maxDepth: number; longestPath: string[] } {
+  // Recursively build tree nodes and find longest path.
+  // `ancestors` guards against initiator cycles (a request initiated by itself,
+  // or a longer A → B → A loop) which would otherwise recurse infinitely.
+  function buildNode(url: string, depth: number, ancestors: ReadonlySet<string>): { node: CriticalPathTreeNode; maxDepth: number; longestPath: string[] } {
     const req = reqMap.get(url);
     const children = childrenOf.get(url) ?? [];
     let maxChildDepth = depth;
     let longestChildPath: string[] = [url];
     const childNodes: CriticalPathTreeNode[] = [];
 
+    const nextAncestors = new Set(ancestors);
+    nextAncestors.add(url);
+
     for (const child of children) {
-      const result = buildNode(child.url, depth + 1);
+      if (nextAncestors.has(child.url)) continue;
+      const result = buildNode(child.url, depth + 1, nextAncestors);
       childNodes.push(result.node);
       if (result.maxDepth > maxChildDepth) {
         maxChildDepth = result.maxDepth;
@@ -111,7 +166,7 @@ function buildCriticalPathInfo(requests: NormalizedRequest[]): CriticalPathInfo 
     };
   }
 
-  const result = buildNode(root.url, 1);
+  const result = buildNode(root.url, 1, new Set<string>());
 
   return {
     tree: result.node,
@@ -209,6 +264,7 @@ export function buildNetworkIR(
         initiatorUrl: entry.initiator?.url,
         failed: !!(entry.failed || entry.errorText),
         timing: computeTiming(timing),
+        responseHeaders: pickResponseHeaders(entry.response?.headers),
       };
     },
   );

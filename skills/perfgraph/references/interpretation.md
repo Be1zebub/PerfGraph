@@ -60,6 +60,22 @@ Limitations: <warnings, missing collectors, confidence caveats>.
   how much — that is two measurements under different conditions, not a
   contradiction.
 
+## Document response headers
+
+`insights.documentResponse` carries the headers of the document the visitor
+received. They answer what the timings cannot:
+
+- `cf-cache-status` / `x-cache` — was the HTML served from the edge? `DYNAMIC`
+  or `MISS` on a document that is the same for every visitor means the origin
+  answers every request.
+- `cache-control` — `max-age=0, must-revalidate` disables caching even when
+  the edge could serve it.
+- `content-encoding` — whether the body was compressed.
+- `alt-svc` — whether a faster protocol (HTTP/3) is offered.
+- `server-timing` — where the origin spent its time.
+
+There is no need to fetch the page again with curl to learn these.
+
 ## Document chain
 
 `insights.criticalPath.documentChain` appears when the browser loaded more

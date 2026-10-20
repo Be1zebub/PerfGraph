@@ -162,6 +162,8 @@ export const NormalizedRequestSchema = z.object({
   initiatorUrl: z.string().optional(),
   failed: z.boolean(),
   timing: NormalizedRequestTimingSchema,
+  /** Response headers of the document — caching, encoding and connection hints */
+  responseHeaders: z.record(z.string(), z.string()).optional(),
 });
 
 export const NormalizedRequestChainSchema = z.object({

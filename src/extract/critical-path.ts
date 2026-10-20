@@ -132,7 +132,33 @@ export function extractCriticalPath(ir: IRBundle): CriticalPath | undefined {
     longestSingleRequest: result.longestSingleRequest,
     urlsOnLongestPath: cpInfo.urlsOnLongestPath?.length ? cpInfo.urlsOnLongestPath : undefined,
     tree: cpInfo.tree,
+    documentResponse: extractDocumentResponse(ir),
     documentChain: extractDocumentChain(ir),
+  };
+}
+
+/**
+ * Collect the response of the document the page metrics are anchored to.
+ *
+ * The last document is the one the visitor ended up on, so its headers
+ * describe the response that mattered.
+ */
+function extractDocumentResponse(ir: IRBundle): CriticalPath['documentResponse'] {
+  const documents = ir.network.requests.filter(
+    (r) => r.resourceType === 'Document' && !r.url.startsWith('data:'),
+  );
+  const document = documents[documents.length - 1];
+  if (!document) return undefined;
+
+  const headers = document.responseHeaders ?? {};
+  if (Object.keys(headers).length === 0 && document.statusCode === undefined) {
+    return undefined;
+  }
+
+  return {
+    url: document.url,
+    status: document.statusCode || undefined,
+    headers,
   };
 }
 

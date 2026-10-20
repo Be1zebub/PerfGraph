@@ -90,6 +90,19 @@ export const CriticalPathSchema = z.object({
    * already received: a redirect or a client-side route change. The time
    * spent on the discarded documents is time the user waited for nothing.
    */
+  /**
+   * The response of the document the page metrics are anchored to.
+   *
+   * The headers answer what the timings cannot: whether the HTML is cached
+   * at the edge, how it is encoded, whether the connection can be upgraded.
+   */
+  documentResponse: z
+    .object({
+      url: z.string(),
+      status: z.number().optional(),
+      headers: z.record(z.string(), z.string()),
+    })
+    .optional(),
   documentChain: z
     .object({
       /** Number of document responses, including the final one */

@@ -140,6 +140,14 @@ than one document: it navigated away from a page it had already received.
 Report `wastedServerMs` as the server work nobody used and `contentAtMs` as
 when the content arrived. A single run cannot separate the cost of the chain
 from the cost of the load, so do not present it as a measured delay.
+
+`insights.documentResponse` carries the headers of the document the visitor
+received — cache status, cache-control, content encoding, alt-svc. Use them
+before blaming the server: a document that is fetched from the origin on every
+visit because of `cf-cache-status: DYNAMIC` and `max-age=0` is a caching
+problem, not a slow backend. Do not fetch the page again with curl to learn
+these.
+
 `insights.lighthouse.failedAudits` lists the Lighthouse audits that did not
 pass, with their values — they carry findings the causal rules cannot derive,
 such as forced reflows or main-thread work.

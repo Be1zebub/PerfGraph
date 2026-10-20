@@ -93,6 +93,17 @@ export interface Insights {
       displayValue?: string;
     }>;
   };
+  /**
+   * The response of the document the visitor received.
+   *
+   * The headers answer what the timings cannot: whether the HTML is cached
+   * at the edge, how it is encoded, whether the connection can be upgraded.
+   */
+  documentResponse?: {
+    url?: string;
+    status?: number;
+    headers: Record<string, string>;
+  };
   lcpElement?: {
     selector?: string;
     snippet?: string;
@@ -440,6 +451,25 @@ function buildCriticalPath(
     pageLifecycleMs: cp?.pageLifecycleMs,
     documentChain: cp?.documentChain,
     tree,
+  };
+}
+
+/**
+ * Build the response summary of the document the visitor received.
+ *
+ * The document is the one the page metrics are anchored to, so its headers
+ * describe the response that mattered.
+ */
+function buildDocumentResponse(
+  features: FeatureSet,
+): Insights['documentResponse'] | undefined {
+  const document = features.criticalPath?.documentResponse;
+  if (!document) return undefined;
+
+  return {
+    url: document.url,
+    status: document.status,
+    headers: document.headers,
   };
 }
 
@@ -794,6 +824,7 @@ export function buildInsights(
       tbtStatus: tbtAuditSane != null ? 'measured' : 'unavailable',
       failedAudits: collectFailedAudits(lhr),
     },
+    documentResponse: buildDocumentResponse(features),
     lcpElement,
     renderBlocking,
     criticalPath,
