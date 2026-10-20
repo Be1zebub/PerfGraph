@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { readFileSync } from 'node:fs';
+
 /**
  * PerfGraph CLI entry point.
  *
@@ -103,6 +105,7 @@ EXAMPLES
   perfgraph report ./features.toon --output report.toon --pretty
   perfgraph run --url https://example.com --pretty          (full pipeline)
   perfgraph run --url https://example.com --pretty --runs 3
+  perfgraph --version
 
 AGENT SKILL
   This package ships skills/perfgraph: instructions for an AI agent to run
@@ -111,11 +114,33 @@ AGENT SKILL
 `);
 }
 
+/**
+ * The version of the installed package.
+ *
+ * The skill names the version it was written for, so an agent can tell
+ * whether the skill it loaded matches the tool it runs.
+ */
+function readPackageVersion(): string {
+  try {
+    const packageJson = readFileSync(new URL('../package.json', import.meta.url), 'utf-8');
+    const parsed = JSON.parse(packageJson) as { version?: string };
+    return parsed.version ?? 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
 async function main(): Promise<void> {
   const [subcommand] = args;
 
   if (args.length === 0) {
     printHelp();
+    process.exit(0);
+  }
+
+  // The version an agent can compare against the version of the skill.
+  if (subcommand === '--version' || subcommand === '-v' || subcommand === 'version') {
+    console.log(readPackageVersion());
     process.exit(0);
   }
 
