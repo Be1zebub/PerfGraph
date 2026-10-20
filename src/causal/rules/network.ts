@@ -164,21 +164,21 @@ export const documentChainRule = {
 
   applies(features: FeatureSet): boolean {
     const chain = features.criticalPath?.documentChain;
-    return chain != null && chain.count > 1 && chain.discardedMs >= REDIRECT_COST_WARN;
+    return chain != null && chain.count > 1 && chain.overheadMs >= REDIRECT_COST_WARN;
   },
 
   build(features: FeatureSet): { nodes: CausalNode[]; edges: CausalEdge[] } {
     const chain = features.criticalPath!.documentChain!;
-    const isHeavy = chain.discardedMs >= 1000;
+    const isHeavy = chain.overheadMs >= 1000;
 
     const evidence: Evidence = {
       urls: chain.urls,
       metric: {
-        name: 'Time spent on discarded documents',
-        value: Math.round(chain.discardedMs),
+        name: 'Time added by the document chain',
+        value: Math.round(chain.overheadMs),
         unit: 'ms',
         source: 'network',
-        method: 'Duration of the document responses the browser navigated away from',
+        method: 'Time between the discarded document and the document the visitor finally saw',
       },
     };
 
@@ -196,10 +196,10 @@ export const documentChainRule = {
       },
       {
         id: 'discarded-document',
-        label: `Discarded document (${Math.round(chain.discardedMs)}ms)`,
+        label: `Document discarded after ${Math.round(chain.overheadMs)}ms`,
         type: 'bottleneck',
         severity: isHeavy ? 'critical' : 'warning',
-        value: Math.round(chain.discardedMs),
+        value: Math.round(chain.overheadMs),
         unit: 'ms',
         threshold: REDIRECT_COST_WARN,
         impactSurface: 'initial-viewport',

@@ -200,7 +200,7 @@ own:
 ```text
 runContext:  browser, os, device, viewport, throttling, owned domains
 metrics:     lcpMs, fcpMs, cls, tbtMs  — measured in the PerfGraph run
-lighthouse:  performance, lcpMs, fcpMs, cls, tbtMs — Lighthouse's own run
+lighthouse:  performance, lcpMs, fcpMs, cls, tbtMs, failedAudits — Lighthouse's own run
 lcpElement:  selector, nodeLabel, source, type
 ```
 
@@ -208,6 +208,11 @@ lcpElement:  selector, nodeLabel, source, type
 `performance-api` when the browser's own LCP entry identified the element,
 `lighthouse` or `trace` otherwise; `lcpElement.type` is `text` or `image`, and
 only an image LCP has a resource URL and load timings.
+
+`criticalPath.documentChain` appears when the browser loaded more than one
+document — it navigated away from a page it had already received.
+`overheadMs` is what that cost the visitor, `wastedServerMs` the server work
+nobody used.
 
 ## Report format
 

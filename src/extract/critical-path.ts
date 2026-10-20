@@ -10,8 +10,8 @@ import type { IRBundle, NormalizedRequest, CriticalPathTreeNode } from '../norma
 import type { CriticalPath } from './types.js';
 
 /** Safely treat any non-finite number as 0. */
-function safe(v: number): number {
-  return Number.isFinite(v) && v >= 0 ? v : 0;
+function safe(v: number | undefined): number {
+  return v !== undefined && Number.isFinite(v) && v >= 0 ? v : 0;
 }
 
 /**
@@ -139,9 +139,13 @@ export function extractCriticalPath(ir: IRBundle): CriticalPath | undefined {
 /**
  * Collect the document responses the browser loaded.
  *
- * When the page loaded more than one document, the first ones were thrown
- * away — the browser navigated away from a page it had already received.
- * The time spent on them is the cost of that navigation.
+ * When the page loaded more than one document, the browser navigated away
+ * from a page it had already received. Two numbers matter:
+ *
+ * - the overhead: how much later the content the user actually sees arrived
+ *   compared to the document that was thrown away. This is what the chain
+ *   cost the visitor.
+ * - the wasted server time: the origin produced a response nobody used.
  */
 function extractDocumentChain(ir: IRBundle): CriticalPath['documentChain'] {
   const documents = ir.network.requests.filter(
@@ -149,14 +153,25 @@ function extractDocumentChain(ir: IRBundle): CriticalPath['documentChain'] {
   );
   if (documents.length < 2) return undefined;
 
-  const discarded = documents.slice(0, -1);
+  const first = documents[0]!;
   const final = documents[documents.length - 1]!;
+  const discarded = documents.slice(0, -1);
+
+  // The response time of a request, relative to the navigation start.
+  const responseAt = (request: NormalizedRequest) =>
+    safe(request.startTime) + safe(request.duration);
+
+  const overheadMs = Math.max(0, responseAt(final) - responseAt(first));
+  const wastedServerMs = discarded.reduce(
+    (sum, request) => sum + safe(request.timing?.receive),
+    0,
+  );
 
   return {
     count: documents.length,
     urls: documents.map((r) => r.url),
-    discardedMs: discarded.reduce((sum, r) => sum + safe(r.duration), 0),
-    chainMs: Math.max(0, safe(final.startTime) - safe(documents[0]!.startTime)),
+    overheadMs,
+    wastedServerMs,
   };
 }
 

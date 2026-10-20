@@ -60,8 +60,20 @@ Limitations: <warnings, missing collectors, confidence caveats>.
   how much — that is two measurements under different conditions, not a
   contradiction.
 
-## LCP element and resource
+## Document chain
 
+`insights.criticalPath.documentChain` appears when the browser loaded more
+than one document. That means it navigated away from a page it had already
+received — a redirect or a client-side route change.
+
+- `overheadMs` is the time the content the visitor finally saw arrived after
+  the discarded document. That is what the chain cost.
+- `wastedServerMs` is the server time spent on the response nobody used.
+
+Both are measurements. Do not describe the chain as "the server is slow" when
+the server wait is a small part of it.
+
+## LCP element and resource
 `insights.lcpElement` describes the element the browser reported:
 
 - `source`: `performance-api` (the browser's own LCP entry), `lighthouse`, or

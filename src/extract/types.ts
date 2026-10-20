@@ -96,10 +96,13 @@ export const CriticalPathSchema = z.object({
       count: z.number(),
       /** URLs in load order */
       urls: z.array(z.string()),
-      /** Time spent on the documents that were discarded */
-      discardedMs: z.number(),
-      /** Time from the first document request to the last one */
-      chainMs: z.number(),
+      /**
+       * Time the content the user finally sees arrived after the discarded
+       * document. This is what the document chain cost.
+       */
+      overheadMs: z.number(),
+      /** Server time spent on the documents that were thrown away */
+      wastedServerMs: z.number(),
     })
     .optional(),
 });

@@ -132,3 +132,10 @@ re-encode. When the element is unknown, report the LCP as a single render
 delay instead of naming a resource. Never present the largest downloaded
 image as the LCP element. The traced lab LCP and the Lighthouse LCP come from
 two different runs — report both with their source instead of merging them.
+
+When `insights.criticalPath.documentChain` is present, the browser loaded more
+than one document: it navigated away from a page it had already received.
+Report `overheadMs` as the cost of that chain and `wastedServerMs` as the
+server work nobody used. `insights.lighthouse.failedAudits` lists the
+Lighthouse audits that did not pass, with their values — they carry findings
+the causal rules cannot derive, such as forced reflows or main-thread work.
