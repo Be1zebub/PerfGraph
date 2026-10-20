@@ -140,12 +140,10 @@ export function extractCriticalPath(ir: IRBundle): CriticalPath | undefined {
  * Collect the document responses the browser loaded.
  *
  * When the page loaded more than one document, the browser navigated away
- * from a page it had already received. Two numbers matter:
- *
- * - the overhead: how much later the content the user actually sees arrived
- *   compared to the document that was thrown away. This is what the chain
- *   cost the visitor.
- * - the wasted server time: the origin produced a response nobody used.
+ * from a page it had already received. The origin produced a response
+ * nobody used, and that is the part of the chain this can measure: a single
+ * run cannot separate the cost of the chain from the cost of the load
+ * itself.
  */
 function extractDocumentChain(ir: IRBundle): CriticalPath['documentChain'] {
   const documents = ir.network.requests.filter(
@@ -153,15 +151,13 @@ function extractDocumentChain(ir: IRBundle): CriticalPath['documentChain'] {
   );
   if (documents.length < 2) return undefined;
 
-  const first = documents[0]!;
-  const final = documents[documents.length - 1]!;
   const discarded = documents.slice(0, -1);
+  const final = documents[documents.length - 1]!;
 
   // The response time of a request, relative to the navigation start.
   const responseAt = (request: NormalizedRequest) =>
     safe(request.startTime) + safe(request.duration);
 
-  const overheadMs = Math.max(0, responseAt(final) - responseAt(first));
   const wastedServerMs = discarded.reduce(
     (sum, request) => sum + safe(request.timing?.receive),
     0,
@@ -170,8 +166,8 @@ function extractDocumentChain(ir: IRBundle): CriticalPath['documentChain'] {
   return {
     count: documents.length,
     urls: documents.map((r) => r.url),
-    overheadMs,
     wastedServerMs,
+    contentAtMs: Math.max(0, responseAt(final)),
   };
 }
 

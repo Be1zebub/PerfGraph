@@ -97,12 +97,18 @@ export const CriticalPathSchema = z.object({
       /** URLs in load order */
       urls: z.array(z.string()),
       /**
-       * Time the content the user finally sees arrived after the discarded
-       * document. This is what the document chain cost.
+       * Server time spent on the documents that were thrown away — work the
+       * origin did for a response nobody used.
        */
-      overheadMs: z.number(),
-      /** Server time spent on the documents that were thrown away */
       wastedServerMs: z.number(),
+      /**
+       * When the content the visitor finally saw arrived, relative to the
+       * navigation start.
+       *
+       * A single run cannot separate the cost of the chain from the cost of
+       * the load itself, so this is the context, not a verdict.
+       */
+      contentAtMs: z.number(),
     })
     .optional(),
 });

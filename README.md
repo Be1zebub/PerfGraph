@@ -211,8 +211,8 @@ only an image LCP has a resource URL and load timings.
 
 `criticalPath.documentChain` appears when the browser loaded more than one
 document — it navigated away from a page it had already received.
-`overheadMs` is what that cost the visitor, `wastedServerMs` the server work
-nobody used.
+`wastedServerMs` is the server time spent on a response nobody used,
+`contentAtMs` when the content the visitor saw arrived.
 
 ## Report format
 

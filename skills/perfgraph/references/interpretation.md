@@ -66,12 +66,14 @@ Limitations: <warnings, missing collectors, confidence caveats>.
 than one document. That means it navigated away from a page it had already
 received — a redirect or a client-side route change.
 
-- `overheadMs` is the time the content the visitor finally saw arrived after
-  the discarded document. That is what the chain cost.
 - `wastedServerMs` is the server time spent on the response nobody used.
+- `contentAtMs` is when the content the visitor finally saw arrived, relative
+  to the navigation start.
 
-Both are measurements. Do not describe the chain as "the server is slow" when
-the server wait is a small part of it.
+A single run cannot separate the cost of the chain from the cost of the load
+itself, so report the chain as a fact with the wasted server time, not as a
+measured delay. Do not describe it as "the server is slow" when the server
+wait is a small part of it.
 
 ## LCP element and resource
 `insights.lcpElement` describes the element the browser reported:

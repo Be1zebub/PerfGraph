@@ -97,8 +97,8 @@ describe('buildCausalGraph', () => {
         documentChain: {
           count: 2,
           urls: ['https://example.com/', 'https://example.com/ru'],
-          overheadMs: 890,
-          wastedServerMs: 120,
+          wastedServerMs: 890,
+          contentAtMs: 1200,
         },
       },
     });

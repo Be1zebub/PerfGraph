@@ -135,7 +135,9 @@ two different runs — report both with their source instead of merging them.
 
 When `insights.criticalPath.documentChain` is present, the browser loaded more
 than one document: it navigated away from a page it had already received.
-Report `overheadMs` as the cost of that chain and `wastedServerMs` as the
-server work nobody used. `insights.lighthouse.failedAudits` lists the
-Lighthouse audits that did not pass, with their values — they carry findings
-the causal rules cannot derive, such as forced reflows or main-thread work.
+Report `wastedServerMs` as the server work nobody used and `contentAtMs` as
+when the content arrived. A single run cannot separate the cost of the chain
+from the cost of the load, so do not present it as a measured delay.
+`insights.lighthouse.failedAudits` lists the Lighthouse audits that did not
+pass, with their values — they carry findings the causal rules cannot derive,
+such as forced reflows or main-thread work.

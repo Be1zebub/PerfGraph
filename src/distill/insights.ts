@@ -134,8 +134,8 @@ export interface Insights {
     documentChain?: {
       count: number;
       urls: string[];
-      overheadMs: number;
       wastedServerMs: number;
+      contentAtMs: number;
     };
   };
   warnings: string[];
