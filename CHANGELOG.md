@@ -23,7 +23,8 @@ the only runtime interface, and the agent-facing layer is a skill.
 - `insights.toon` separates the two measurements: `metrics` from the
   PerfGraph run and `lighthouse` from Lighthouse's own navigation.
 - `criticalPath.documentChain` reports a page that loaded more than one
-  document, with the cost of the chain and the server time nobody used.
+  document, with the server time spent on a response nobody used and when
+  the content the visitor saw arrived.
 - `insights.lighthouse.failedAudits` lists the Lighthouse audits that did not
   pass, with their values.
 
