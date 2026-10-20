@@ -97,6 +97,21 @@ received. They answer what the timings cannot:
 
 There is no need to fetch the page again with curl to learn these.
 
+## Render-blocking resources
+
+`insights.renderBlocking` lists the resources that were requested before the
+first paint. Each one carries its `priority` and its `initiator`, and they
+decide whether it really blocked anything:
+
+- a stylesheet the document requested normally blocks the render;
+- a stylesheet a **script** injected with a **very low priority** is usually
+  the `media="print"` trick — a non-blocking preload that swaps itself in
+  later. The report cannot see the media attribute, so check the priority and
+  the initiator before you report it as blocking.
+
+When the Lighthouse list and the network list disagree, `renderBlockingSources`
+tells you which resources only one of them saw.
+
 ## Document chain
 
 `insights.criticalPath.documentChain` appears when the browser loaded more

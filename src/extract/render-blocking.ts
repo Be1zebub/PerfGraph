@@ -90,6 +90,10 @@ export function extractRenderBlocking(ir: IRBundle): RenderBlockingScore | undef
   // document entry to re-introduce the old false-positive classification.
   const lighthouseResources = ir.lighthouse.renderBlockingResources
     ?.filter((resource) => resource.resourceType !== 'Document');
+  const requestByUrl = new Map<string, NormalizedRequest>();
+  for (const request of requests) {
+    requestByUrl.set(request.url, request);
+  }
   const networkResources = requests
     .filter((request) => isRenderBlocking(request, firstPaintMs))
     .map((request) => ({
@@ -97,9 +101,18 @@ export function extractRenderBlocking(ir: IRBundle): RenderBlockingScore | undef
       totalBytes: safe(request.bytes),
       wastedMs: undefined,
       resourceType: request.resourceType,
+      priority: request.priority,
+      initiator: request.initiator,
     }));
   const resources = lighthouseResources && lighthouseResources.length > 0
-    ? lighthouseResources
+    ? lighthouseResources.map((resource) => {
+        // The Lighthouse list has no priority or initiator, and the network
+        // log knows them. Merge, so both lists carry the same evidence.
+        const request = requestByUrl.get(resource.url);
+        return request
+          ? { ...resource, priority: request.priority, initiator: request.initiator }
+          : resource;
+      })
     : networkResources;
   const totalWastedMs = lighthouseResources
     ?.reduce((sum, r) => sum + (r.wastedMs ?? 0), 0);

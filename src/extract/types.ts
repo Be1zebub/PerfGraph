@@ -210,6 +210,16 @@ export const RenderBlockingResourceSchema = z.object({
   totalBytes: z.number().optional(),
   wastedMs: z.number().optional(),
   resourceType: z.string().optional(),
+  /**
+   * How the browser prioritised the request.
+   *
+   * A stylesheet a script injected with a very low priority is usually a
+   * non-blocking preload — the `media="print"` trick — and the report
+   * cannot see the media attribute. The priority is the evidence.
+   */
+  priority: z.string().optional(),
+  /** What started the request */
+  initiator: z.string().optional(),
 });
 
 export const RenderBlockingScoreSchema = z.object({
