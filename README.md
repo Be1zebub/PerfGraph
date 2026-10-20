@@ -191,12 +191,29 @@ warnings and missing data. `.toon` files are text and should not be parsed as
 JSON. The full agent instructions live in
 [`skills/perfgraph/SKILL.md`](skills/perfgraph/SKILL.md).
 
+## Insights format
+
+`insights.toon` is the compact triage artifact. It keeps the two measurement
+runs apart, because PerfGraph and Lighthouse each navigate the page on their
+own:
+
+```text
+runContext:  browser, os, device, viewport, throttling, owned domains
+metrics:     lcpMs, fcpMs, cls, tbtMs  — measured in the PerfGraph run
+lighthouse:  performance, lcpMs, fcpMs, cls, tbtMs — Lighthouse's own run
+lcpElement:  selector, nodeLabel, source, type
+```
+
+`metrics.lcpSource` names the run the LCP came from. `lcpElement.source` is
+`performance-api` when the browser's own LCP entry identified the element,
+`lighthouse` or `trace` otherwise; `lcpElement.type` is `text` or `image`, and
+only an image LCP has a resource URL and load timings.
+
 ## Report format
 
 `perfgraph run` writes `report.toon` (compact, agent-facing) and
 `report.md` (human-readable) next to the raw artifacts; the same report object
 is printed as JSON on stdout. Key sections:
-
 ```jsonc
 {
  "meta": {
