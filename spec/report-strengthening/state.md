@@ -13,7 +13,7 @@
 
 ## Current implementation baseline
 
-- Report format version is now `1.2.0`.
+- Report format version is now `1.3.0`.
 - Nodes and chain paths carry `basis: observed|inferred`.
 - Report/Insights expose partial data quality and metric provenance fields.
 - `Document` is excluded from render-blocking extraction.
@@ -40,7 +40,7 @@
 
 ## Decisions to make during implementation
 
-- Timing/provenance additions use report `1.2.0`.
+- Timing/provenance additions use report `1.3.0`.
 - Ownership currently uses explicit known CDN mappings, with a follow-up
   extension point for user-provided owned domains.
 - `pageLifecycleMs` uses the later of the normalized network end and
@@ -53,3 +53,22 @@
 All acceptance criteria are implemented. Trace overlap remains an optional
 future evidence source; in its absence the report correctly downgrades the
 causal status instead of claiming verification.
+
+## Проверка на реальных сайтах
+
+Два независимых прогона против живых сайтов (bzbb.dev, silk.bzbb.dev)
+проверили связность артефактов. По результатам:
+
+- run environment действительно сохраняется в IR, features, report и
+  insights — раньше он терялся при перезагрузке bundle'а с диска;
+- источники метрик разделены: `insights.metrics` — лабораторный прогон,
+  `insights.lighthouse` — отдельный прогон Lighthouse, и ни одно значение не
+  подменяет другое;
+- лабораторный TBT и TBT Lighthouse больше не путаются, а завышенные
+  значения Lighthouse (151 с в headless-прогоне) помечаются как недоступные;
+- insights переиспользует рекомендации отчёта, поэтому оба артефакта дают
+  агенту один и тот же ответ;
+- байты в отчёте соответствуют реальным: размер тела берётся из
+  `Network.loadingFinished`, а не из заголовков `responseReceived`;
+- `impactSurface` больше не `unknown` у узлов LCP-цепочки, а
+  `scoreExplanation` объясняет вердикт.
