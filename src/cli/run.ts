@@ -223,7 +223,28 @@ export async function runRun(
   // Also print to stdout
   console.log(reportJson);
 
-  console.error(`Report written to ${reportFile}`);
+  // A human running the CLI should see where the result is and what it says,
+  // without having to read the JSON.
+  console.error('');
+  console.error(`Score: ${report.summary.score.toUpperCase()}`);
+  if (report.summary.lighthousePerformance != null) {
+    console.error(
+      `Lighthouse performance: ${(report.summary.lighthousePerformance * 100).toFixed(0)}/100`,
+    );
+  }
+  console.error(
+    `Issues: ${report.summary.criticalIssues} critical, ${report.summary.warnings} warnings, ${report.summary.infos} info`,
+  );
+  if (report.summary.dataQuality?.warnings.length) {
+    console.error(`Data quality: ${report.summary.dataQuality.status}`);
+    for (const warning of report.summary.dataQuality.warnings) {
+      console.error(`  - ${warning}`);
+    }
+  }
+  console.error('');
+  console.error(`Report: ${reportFile}`);
+  console.error(`Markdown: ${reportMdFile}`);
+  console.error(`Insights: ${insightsFile}`);
 
   return {
     success: true,
