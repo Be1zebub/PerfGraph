@@ -27,6 +27,7 @@ interface LHRAudit {
   score?: number | null;
   numericValue?: number;
   details?: Record<string, unknown>;
+  metricSavings?: Record<string, unknown>;
 }
 
 /** Shape of a single category entry in the LHR */
@@ -191,6 +192,9 @@ export function buildLighthouseIR(
   const renderBlockingResources = renderBlockingAudit
     ? parseRenderBlockingResources(renderBlockingAudit)
     : undefined;
+  const metricSavings = renderBlockingAudit && isRecord(renderBlockingAudit.metricSavings)
+    ? renderBlockingAudit.metricSavings
+    : undefined;
 
   return {
     categories,
@@ -201,5 +205,7 @@ export function buildLighthouseIR(
     lcpElementSnippet: lcpElement?.snippet,
     lcpElementNodeLabel: lcpElement?.nodeLabel,
     renderBlockingResources,
+    renderBlockingLcpSavingsMs: typeof metricSavings?.LCP === 'number' ? metricSavings.LCP : undefined,
+    renderBlockingFcpSavingsMs: typeof metricSavings?.FCP === 'number' ? metricSavings.FCP : undefined,
   };
 }

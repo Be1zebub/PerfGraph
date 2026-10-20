@@ -30,7 +30,7 @@ describe('extractRenderBlocking', () => {
     expect(result).toBeUndefined();
   });
 
-  it('blocks Stylesheet, Document, VeryHigh Script', () => {
+  it('blocks Stylesheet and VeryHigh Script, but not the document', () => {
     const ir = makeIRBundle({
       network: {
         requests: [
@@ -45,12 +45,13 @@ describe('extractRenderBlocking', () => {
     });
     const result = extractRenderBlocking(ir);
     expect(result).toBeDefined();
-    // Blocking: Document(1) + Stylesheet(1) + Script VeryHigh(1) = 3
-    expect(result!.blockingRequestCount).toBe(3);
-    expect(result!.blockingBytes).toBe(5000 + 10000 + 30000); // 45000
-    expect(result!.blockingDuration).toBe(100 + 100 + 200); // 400
-    // Score: countScore = 1 - 3/20 = 0.85, no LH audit → score = 0.85
-    expect(result!.renderBlockingScore).toBeCloseTo(0.85, 5);
+    // Blocking: Stylesheet(1) + Script VeryHigh(1) = 2
+    expect(result!.blockingRequestCount).toBe(2);
+    expect(result!.blockingBytes).toBe(10000 + 30000); // 40000
+    expect(result!.blockingDuration).toBe(100 + 200); // 300
+    // Score: countScore = 1 - 2/20 = 0.9, no LH audit → score = 0.9
+    expect(result!.renderBlockingScore).toBeCloseTo(0.9, 5);
+    expect(result!.resources?.some((resource) => resource.resourceType === 'Document')).toBe(false);
     expect(result!.lhRenderBlockingMs).toBeUndefined();
   });
 

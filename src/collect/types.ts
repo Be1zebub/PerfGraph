@@ -9,7 +9,7 @@
  */
 
 import type { CDPSession } from 'playwright';
-import type { CollectorRunOptions } from '../shared/types.js';
+import type { CollectorRunOptions, RunContext } from '../shared/types.js';
 
 // ---------------------------------------------------------------------------
 // Collector Interface
@@ -47,6 +47,7 @@ export interface Collector {
  * Each field is optional — a collector may fail without blocking others.
  */
 export interface RawDataBundle {
+  context?: RunContext;
   trace?: unknown;
   network?: unknown;
   performance?: unknown;

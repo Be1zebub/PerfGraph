@@ -9,13 +9,13 @@
 import type { IRBundle, NormalizedRequest } from '../normalize/types.js';
 import type { RenderBlockingScore } from './types.js';
 
-/** Tags considered render-blocking by default. */
-const BLOCKING_TYPES = new Set(['Stylesheet', 'Document']);
+/** Resource types that can block first render. */
+const BLOCKING_TYPES = new Set(['Stylesheet']);
 
 /**
  * Check whether a request is render-blocking.
  *
- * - Stylesheet and Document are always blocking.
+ * - Stylesheets are render-blocking by default.
  * - Scripts at VeryHigh priority are considered blocking.
  * - Font preloads and other early-critical resources could be added here.
  */
@@ -61,6 +61,7 @@ export function extractRenderBlocking(ir: IRBundle): RenderBlockingScore | undef
   const lhRenderBlockingMs = lhAudit?.numericValue !== undefined && Number.isFinite(lhAudit.numericValue)
     ? lhAudit.numericValue
     : undefined;
+  const lcpSavingsMs = ir.lighthouse.renderBlockingLcpSavingsMs;
 
   // Score: 0 = lots of blocking, 1 = no blocking
   // Blend count (up to 20 resources = max penalty) and Lighthouse value
@@ -72,10 +73,25 @@ export function extractRenderBlocking(ir: IRBundle): RenderBlockingScore | undef
     ? (countScore + lhScore) / 2
     : countScore;
 
-  // Use Lighthouse insight data for URL-level details
-  const lighthouseResources = ir.lighthouse.renderBlockingResources;
+  // Use Lighthouse insight data for URL-level details, but never allow a
+  // document entry to re-introduce the old false-positive classification.
+  const lighthouseResources = ir.lighthouse.renderBlockingResources
+    ?.filter((resource) => resource.resourceType !== 'Document');
+  const networkResources = requests
+    .filter(isRenderBlocking)
+    .map((request) => ({
+      url: request.url,
+      totalBytes: safe(request.bytes),
+      wastedMs: undefined,
+      resourceType: request.resourceType,
+    }));
+  const resources = lighthouseResources && lighthouseResources.length > 0
+    ? lighthouseResources
+    : networkResources;
   const totalWastedMs = lighthouseResources
     ?.reduce((sum, r) => sum + (r.wastedMs ?? 0), 0);
+  const networkUrls = new Set(networkResources.map((resource) => resource.url));
+  const lighthouseUrls = new Set((lighthouseResources ?? []).map((resource) => resource.url));
 
   return {
     blockingRequestCount,
@@ -83,7 +99,17 @@ export function extractRenderBlocking(ir: IRBundle): RenderBlockingScore | undef
     blockingDuration,
     renderBlockingScore,
     lhRenderBlockingMs,
-    resources: lighthouseResources,
+    lcpSavingsMs,
+    fcpSavingsMs: ir.lighthouse.renderBlockingFcpSavingsMs,
+    resources: resources.length > 0 ? resources : undefined,
     totalWastedMs: lighthouseResources ? totalWastedMs : undefined,
+    networkResourceCount: networkResources.length,
+    lighthouseResourceCount: lighthouseResources?.length ?? 0,
+    sourceConflict: lighthouseResources != null && lighthouseResources.length !== networkResources.length,
+    networkResources,
+    lighthouseResources: lighthouseResources ?? [],
+    networkOnlyCount: [...networkUrls].filter((url) => !lighthouseUrls.has(url)).length,
+    lighthouseOnlyCount: [...lighthouseUrls].filter((url) => !networkUrls.has(url)).length,
+    sourceStatus: lighthouseResources != null && lighthouseResources.length !== networkResources.length ? 'conflicting' : 'measured',
   };
 }

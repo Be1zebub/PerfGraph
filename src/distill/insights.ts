@@ -8,6 +8,7 @@
  */
 
 import type { FeatureSet } from '../extract/types.js';
+import type { RunContext } from '../normalize/types.js';
 import { buildLighthouseInsights } from '../normalize/lighthouse-insights.js';
 import type {
   LighthouseInsights,
@@ -27,6 +28,7 @@ export interface CriticalPathNode {
 export interface Insights {
   url: string;
   analyzedAt: string;
+  runContext?: RunContext;
   lighthouse: {
     performance?: number;
     accessibility?: number;
@@ -36,6 +38,7 @@ export interface Insights {
     fcpMs?: number;
     cls?: number;
     tbtMs?: number;
+    tbtStatus?: 'measured' | 'unavailable';
   };
   lcpElement?: {
     selector: string;
@@ -50,18 +53,38 @@ export interface Insights {
     url: string;
     bytes?: number;
     wastedMs?: number;
+    resourceType?: string;
   }>;
+  thirdParty?: {
+    ratio: number;
+    byOwnership: Record<string, { requests: number; bytes: number; duration: number }>;
+  };
+  renderBlockingSources?: {
+    networkCount: number;
+    lighthouseCount: number;
+    networkOnlyCount: number;
+    lighthouseOnlyCount: number;
+  };
   criticalPath?: {
     depth: number;
     longestChainMs?: number;
+    elapsedCriticalPathMs?: number;
+    aggregateRequestDurationMs?: number;
+    pageLifecycleMs?: number;
     tree?: CriticalPathNode;
   };
   warnings: string[];
+  dataQuality?: {
+    status: 'complete' | 'partial';
+    warnings: string[];
+  };
   topRecommendations: Array<{
     priority: 'critical' | 'high' | 'medium';
     title: string;
     action: string;
     evidence?: string[];
+    applicability?: 'applicable' | 'not-applicable' | 'insufficient-evidence';
+    verification?: string;
   }>;
 }
 
@@ -75,6 +98,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function safeNumber(value: unknown): number | undefined {
   return typeof value === 'number' ? value : undefined;
+}
+
+function buildDataQuality(features: FeatureSet, tbtMs?: number): Insights['dataQuality'] {
+  const warnings: string[] = [];
+  if (features.lcpBreakdown == null) warnings.push('LCP breakdown is unavailable.');
+  if (features.layoutShifts == null) warnings.push('Layout-shift data is unavailable.');
+  if (features.mainThreadBlocking == null) {
+    warnings.push('Main-thread data is unavailable.');
+  } else if (tbtMs == null) {
+    warnings.push('Measured TBT is unavailable; busyMs is not used as a TBT substitute.');
+  }
+  if (features.renderBlocking?.sourceConflict) {
+    warnings.push('Network and Lighthouse render-blocking counts differ; verify both source lists before attributing LCP impact.');
+  }
+  const criticalPath = features.criticalPath;
+  if (criticalPath?.pageLifecycleMs != null && criticalPath.aggregateRequestDurationMs > criticalPath.pageLifecycleMs * 2) {
+    warnings.push('Aggregate request duration exceeds page lifecycle; interpret it as parallel work rather than user wait time.');
+  }
+  return {
+    status: warnings.length > 0 ? 'partial' : 'complete',
+    warnings,
+  };
 }
 
 /** Navigate to the LHR root — handles { lhr: {...} } wrapper used by LighthouseRawData. */
@@ -145,15 +190,26 @@ function buildLcpElement(
 /** Build renderBlocking array from Lighthouse insights. */
 function buildRenderBlocking(
   insights: LighthouseInsights,
+  features: FeatureSet,
 ): Insights['renderBlocking'] {
   const rb = insights.renderBlocking;
-  if (!rb || !rb.resources) return [];
+  if (rb?.resources && rb.resources.length > 0) {
+    return rb.resources
+      .filter((resource) => resource.resourceType !== 'Document')
+      .map((r) => ({
+        url: r.url,
+        bytes: r.totalBytes,
+        wastedMs: r.wastedMs,
+        resourceType: r.resourceType,
+      }));
+  }
 
-  return rb.resources.map((r) => ({
-    url: r.url,
-    bytes: r.totalBytes,
-    wastedMs: r.wastedMs,
-  }));
+  return features.renderBlocking?.resources?.map((resource) => ({
+    url: resource.url,
+    bytes: resource.totalBytes,
+    wastedMs: resource.wastedMs,
+    resourceType: resource.resourceType,
+  })) ?? [];
 }
 
 /** Convert a NetworkChainNode to a CriticalPathNode. */
@@ -194,7 +250,10 @@ function buildCriticalPath(
 
   return {
     depth: cp?.deepestChainDepth ?? 0,
-    longestChainMs: ndt?.longestChainDuration ?? cp?.longestSingleRequest,
+    longestChainMs: cp?.elapsedCriticalPathMs ?? ndt?.longestChainDuration ?? cp?.longestSingleRequest,
+    elapsedCriticalPathMs: cp?.elapsedCriticalPathMs,
+    aggregateRequestDurationMs: cp?.aggregateRequestDurationMs,
+    pageLifecycleMs: cp?.pageLifecycleMs,
     tree,
   };
 }
@@ -241,13 +300,16 @@ function buildRecommendations(
 ): Insights['topRecommendations'] {
   const recs: Insights['topRecommendations'] = [];
 
+  const lcpIsImage = input.features.lcpBreakdown?.lcpResourceType?.toLowerCase().includes('image') ?? false;
+
   // Critical: LCP > 4000ms
   if (input.lcpMs !== undefined && input.lcpMs > 4000) {
     recs.push({
       priority: 'critical',
       title: 'Optimize Largest Contentful Paint',
-      action:
-        'Reduce LCP by optimizing server response time, eliminating render-blocking resources, and optimizing images.',
+      action: lcpIsImage
+        ? 'Reduce LCP by optimizing server response time, removing render-blocking work, and prioritizing the LCP image.'
+        : 'Reduce LCP by optimizing server response time, removing render-blocking work, and reducing the LCP element render delay.',
       evidence: [`LCP: ${input.lcpMs}ms`],
     });
   }
@@ -286,6 +348,8 @@ function buildRecommendations(
       action:
         'Optimize server response time (TTFB), preload key resources, and optimize the LCP element.',
       evidence: [`LCP: ${input.lcpMs}ms`],
+      applicability: 'applicable',
+      verification: 'Repeat the same lab run and confirm LCP improves without a regression in CLS.',
     });
   }
 
@@ -358,7 +422,11 @@ function buildRecommendations(
     });
   }
 
-  return recs;
+  return recs.map((rec) => ({
+    ...rec,
+    applicability: rec.applicability ?? 'applicable',
+    verification: rec.verification ?? 'Repeat the same lab run and compare the cited metric before and after the change.',
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -408,25 +476,26 @@ export function buildInsights(
   // CLS: prefer FeatureSet, then raw audit
   const cls = features.layoutShifts?.cls ?? clsAudit;
 
-  // TBT: prefer Lighthouse audit (the real TBT metric) when it's sane,
-  // otherwise use FeatureSet busyMs, or undefined if both are absurd.
-  // In headless/automated environments Lighthouse TBT can be wildly inflated
-  // (e.g. 151s) due to CDP overhead or browser throttling — we cap at 60s
-  // and fall back to busyMs as a best-effort proxy.
+  // TBT: use only a measured Lighthouse/IR TBT value. Main-thread busy time is
+  // a different signal and must not be presented as TBT when the real metric is
+  // unavailable. In headless/automated environments Lighthouse TBT can be
+  // wildly inflated (e.g. 151s) due to CDP overhead or browser throttling;
+  // treat values above the cap as unavailable instead of substituting busyMs.
   const TBT_SANE_MAX = 60_000; // 60 seconds — anything above is an artifact
   const tbtMs =
     tbtAudit !== undefined && tbtAudit >= 0 && tbtAudit <= TBT_SANE_MAX
       ? tbtAudit
-      : features.mainThreadBlocking?.busyMs !== undefined &&
-          features.mainThreadBlocking?.busyMs <= TBT_SANE_MAX
-        ? features.mainThreadBlocking?.busyMs
+      : features.mainThreadBlocking?.tbtMs !== undefined &&
+          features.mainThreadBlocking.tbtMs >= 0 &&
+          features.mainThreadBlocking.tbtMs <= TBT_SANE_MAX
+        ? features.mainThreadBlocking.tbtMs
         : undefined;
 
   // 5. LCP element
   const lcpElement = buildLcpElement(lighthouseInsights, features);
 
   // 6. Render-blocking resources
-  const renderBlocking = buildRenderBlocking(lighthouseInsights);
+  const renderBlocking = buildRenderBlocking(lighthouseInsights, features);
 
   // 7. Critical path
   const criticalPath = buildCriticalPath(features, lighthouseInsights);
@@ -448,6 +517,7 @@ export function buildInsights(
   return {
     url: features.url ?? '',
     analyzedAt: new Date().toISOString(),
+    runContext: features.runContext,
     lighthouse: {
       performance: scores.performance,
       accessibility: scores.accessibility,
@@ -457,11 +527,24 @@ export function buildInsights(
       fcpMs,
       cls,
       tbtMs,
+      tbtStatus: tbtMs != null ? 'measured' : 'unavailable',
     },
     lcpElement,
     renderBlocking,
     criticalPath,
+    thirdParty: features.thirdPartyOverhead
+      ? { ratio: features.thirdPartyOverhead.thirdPartyRatio, byOwnership: features.thirdPartyOverhead.byOwnership }
+      : undefined,
+    renderBlockingSources: features.renderBlocking
+      ? {
+          networkCount: features.renderBlocking.networkResourceCount,
+          lighthouseCount: features.renderBlocking.lighthouseResourceCount,
+          networkOnlyCount: features.renderBlocking.networkOnlyCount,
+          lighthouseOnlyCount: features.renderBlocking.lighthouseOnlyCount,
+        }
+      : undefined,
     warnings,
+    dataQuality: buildDataQuality(features, tbtMs),
     topRecommendations,
   };
 }

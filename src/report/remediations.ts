@@ -27,6 +27,8 @@ export interface RemediationContext {
   nodeType?: string;
   /** Rule ID for fallback lookup by prefix */
   ruleId?: string;
+  /** Resource kind of the LCP element, used to avoid image-only advice for text. */
+  lcpResourceType?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +97,9 @@ const REMEDIATIONS: Record<RemediationKey, string> = {
   'high-tbt':
     'Use Lighthouse "Reduce JavaScript execution time" for precise recommendations. ' +
     'Optimise heavy scripts, remove dead code (tree shaking).',
+  'main-thread-contention':
+    'Main-thread busy time is not TBT. Capture a valid TBT or long-task metric, ' +
+    'then profile and defer non-critical JavaScript before making a remediation claim.',
   'delayed-inp-tbt':
     'INP may be high due to long tasks: break tasks into 50ms chunks with ' +
     'setTimeout(yield) or scheduler.postTask(). Use Browser Timeline to find culprits.',
@@ -221,6 +226,9 @@ export function getRemediation(
 
     // Increased LCP with value
     if (issueId === 'increased-lcp' && context.value != null) {
+      if (context.lcpResourceType && !context.lcpResourceType.toLowerCase().includes('image')) {
+        return `LCP is high (${context.value}ms) and the LCP element is not an image. Reduce render delay, main-thread work, and blocking styles/scripts instead of applying image optimization advice.`;
+      }
       return `LCP is high (${context.value}ms). Optimise the LCP element: ensure it loads early, use modern image formats (WebP/AVIF) with correct dimensions, add fetchpriority="high" on the LCP image.`;
     }
 

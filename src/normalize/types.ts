@@ -10,6 +10,20 @@
 
 import { z } from 'zod';
 
+export const RunContextSchema = z.object({
+  browser: z.string().optional(),
+  os: z.string().optional(),
+  device: z.string().optional(),
+  viewport: z.object({ width: z.number(), height: z.number() }).optional(),
+  cacheState: z.enum(['cold', 'warm', 'unknown']),
+  networkThrottling: z.string(),
+  cpuThrottling: z.string(),
+  headless: z.boolean(),
+  runIndex: z.number().int().positive().optional(),
+  requestedRuns: z.number().int().positive().optional(),
+  ownedDomains: z.array(z.string()).optional(),
+});
+
 // ---------------------------------------------------------------------------
 // Performance IR
 // ---------------------------------------------------------------------------
@@ -231,6 +245,8 @@ export const LighthouseIRSchema = z.object({
   lcpElementNodeLabel: z.string().optional(),
   /** Render-blocking resources with URL, bytes, and wasted ms */
   renderBlockingResources: z.array(RenderBlockingResourceSchema).optional(),
+  renderBlockingLcpSavingsMs: z.number().optional(),
+  renderBlockingFcpSavingsMs: z.number().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -288,6 +304,7 @@ export const IRMetaSchema = z.object({
   fetchedAt: z.string(),
   navigationStart: z.number(),
   irVersion: z.literal('1.0.0'),
+  context: RunContextSchema.optional(),
 });
 
 export const IRBundleSchema = z.strictObject({
@@ -339,4 +356,5 @@ export type NetworkDependencyTreeInsight = z.infer<typeof NetworkDependencyTreeI
 export type LighthouseInsights = z.infer<typeof LighthouseInsightsSchema>;
 
 export type IRMeta = z.infer<typeof IRMetaSchema>;
+export type RunContext = z.infer<typeof RunContextSchema>;
 export type IRBundle = z.infer<typeof IRBundleSchema>;

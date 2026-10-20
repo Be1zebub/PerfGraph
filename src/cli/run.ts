@@ -40,6 +40,7 @@ RUN OPTIONS
   --runs <n>            Number of collection runs (default: 1)
   --pretty              Pretty-print final report JSON
   --device <name>       Device name for mobile emulation (e.g. "iPhone 13")
+  --owned-domain <host> Treat an additional hostname as first-party CDN (repeatable)
   --no-lighthouse       Skip Lighthouse collection
   --no-coverage         Skip JS/CSS coverage collection
   --no-console          Skip console log collection
@@ -93,6 +94,7 @@ export async function runRun(
     noDom?: boolean;
   },
   mobile?: string,
+  ownedDomains: string[] = [],
 ): Promise<RunResult | null> {
   // -----------------------------------------------------------------------
   // 1. Collect
@@ -107,6 +109,7 @@ export async function runRun(
     noConsole: flags.noConsole ?? false,
     noDom: flags.noDom ?? false,
     mobile,
+    ownedDomains,
   };
 
   const collectResults = await run(url, options);
@@ -182,7 +185,10 @@ export async function runRun(
   // -----------------------------------------------------------------------
   // 5. Report
   // -----------------------------------------------------------------------
-  const report = buildReport(graph, features);
+  // Keep the report score aligned with the Lighthouse score already exposed
+  // in insights. Without this argument, a warning-only causal graph can
+  // downgrade an otherwise green Lighthouse run to MODERATE.
+  const report = buildReport(graph, features, insights.lighthouse.performance);
 
   // Write report as .toon (AI consumption) + keep JSON for stdout
   const reportFile = resolve(runDir, 'report.toon');
@@ -227,6 +233,7 @@ export async function runRunFromArgs(
   let runs = DEFAULT_RUN_OPTIONS.runs;
   let pretty = false;
   let mobile: string | undefined;
+  const ownedDomains: string[] = [];
   const flags: {
     noLighthouse: boolean;
     noCoverage: boolean;
@@ -299,6 +306,14 @@ export async function runRunFromArgs(
         mobile = args[++i]!;
         break;
 
+      case '--owned-domain':
+        if (i + 1 >= args.length) {
+          console.error('Error: --owned-domain requires a hostname');
+          return null;
+        }
+        ownedDomains.push(args[++i]!);
+        break;
+
       case '--help':
       case '-h':
         console.log(RUN_HELP);
@@ -319,5 +334,5 @@ export async function runRunFromArgs(
     return null;
   }
 
-  return runRun(url, output, runs, pretty, flags, mobile);
+  return runRun(url, output, runs, pretty, flags, mobile, ownedDomains);
 }

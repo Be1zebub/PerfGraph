@@ -2,7 +2,7 @@
  * LCP-related causal rules.
  *
  * Chains covered:
- *   1. High TTFB → delayed HTML parse → delayed CSS discovery → blocked render → ↑LCP
+ *   1. High TTFB → delayed HTML parse → (CSS discovery → blocked render) → ↑LCP
  *   2. Render-blocking resources → blocked render → ↑LCP
  *   3. Slow LCP resource load → ↑LCP
  *
@@ -59,13 +59,30 @@ export const ttfbLcpChain = {
     return features.lcpBreakdown?.ttfb != null && features.lcpBreakdown.ttfb > TTFB_WARN;
   },
 
+  /**
+   * CSS and render-blocking nodes require resource-level evidence. A high TTFB
+   * alone proves delayed response delivery, not that this page has CSS to
+   * discover or a render-blocking resource to wait for.
+   */
+  hasStylesheetEvidence(features: FeatureSet): boolean {
+    return features.renderBlocking?.resources?.some(
+      (resource) => resource.resourceType === 'Stylesheet',
+    ) ?? false;
+  },
+
   build(features: FeatureSet): { nodes: CausalNode[]; edges: CausalEdge[] } {
     const ttfb = features.lcpBreakdown!.ttfb;
     const conf = confidenceFromDelta(ttfb, TTFB_WARN, TTFB_CRIT);
     const sev = severityFromDelta(ttfb, TTFB_WARN, TTFB_CRIT);
 
     const ttfbEvidence: Evidence = {
-      metric: { name: 'TTFB', value: ttfb, unit: 'ms' },
+      metric: {
+        name: 'TTFB',
+        value: ttfb,
+        unit: 'ms',
+        source: features.lcpBreakdown?.source ?? 'trace',
+        method: 'LCP breakdown TTFB component',
+      },
     };
 
     const nodes: CausalNode[] = [
@@ -86,18 +103,6 @@ export const ttfbLcpChain = {
         severity: sev,
       },
       {
-        id: 'delayed-css-discovery',
-        label: 'Delayed CSS discovery',
-        type: 'bottleneck',
-        severity: sev,
-      },
-      {
-        id: 'blocked-render',
-        label: 'Render blocked',
-        type: 'bottleneck',
-        severity: 'warning',
-      },
-      {
         id: 'increased-lcp',
         label: 'Increased LCP',
         type: 'impact',
@@ -116,28 +121,55 @@ export const ttfbLcpChain = {
         label: 'High TTFB delays HTML parsing start',
         ruleId: 'lcp-ttfb-chain',
       },
-      {
-        source: 'delayed-html-parse',
-        target: 'delayed-css-discovery',
-        confidence: conf,
-        label: 'HTML parsing needed for CSS resource discovery',
-        ruleId: 'lcp-ttfb-chain',
-      },
-      {
-        source: 'delayed-css-discovery',
-        target: 'blocked-render',
-        confidence: conf,
-        label: 'CSS is critical for rendering (render-blocking by default)',
-        ruleId: 'lcp-ttfb-chain',
-      },
-      {
-        source: 'blocked-render',
-        target: 'increased-lcp',
-        confidence: conf,
-        label: 'Blocked render increases LCP',
-        ruleId: 'lcp-ttfb-chain',
-      },
     ];
+
+    if (ttfbLcpChain.hasStylesheetEvidence(features)) {
+      nodes.splice(2, 0,
+        {
+          id: 'delayed-css-discovery',
+          label: 'Delayed CSS discovery',
+          type: 'bottleneck',
+          severity: sev,
+        },
+        {
+          id: 'blocked-render',
+          label: 'Render blocked',
+          type: 'bottleneck',
+          severity: 'warning',
+        },
+      );
+      edges.push(
+        {
+          source: 'delayed-html-parse',
+          target: 'delayed-css-discovery',
+          confidence: conf,
+          label: 'HTML parsing needed for CSS resource discovery',
+          ruleId: 'lcp-ttfb-chain',
+        },
+        {
+          source: 'delayed-css-discovery',
+          target: 'blocked-render',
+          confidence: conf,
+          label: 'Stylesheet evidence indicates a render dependency',
+          ruleId: 'lcp-ttfb-chain',
+        },
+        {
+          source: 'blocked-render',
+          target: 'increased-lcp',
+          confidence: conf,
+          label: 'Render dependency can increase LCP',
+          ruleId: 'lcp-ttfb-chain',
+        },
+      );
+    } else {
+      edges.push({
+        source: 'delayed-html-parse',
+        target: 'increased-lcp',
+        confidence: 'weak',
+        label: 'Delayed response may reduce time available before LCP',
+        ruleId: 'lcp-ttfb-chain',
+      });
+    }
 
     return { nodes, edges };
   },
@@ -170,6 +202,7 @@ export const renderBlockingLcpChain = {
         ? { name: 'LCP', value: features.lcpBreakdown.totalLCP, unit: 'ms' }
         : undefined,
     };
+    const lcpImpactVerified = rb.lcpSavingsMs != null && rb.lcpSavingsMs > 0;
 
     const nodes: CausalNode[] = [
       {
@@ -196,6 +229,7 @@ export const renderBlockingLcpChain = {
         unit: 'ms',
         threshold: LCP_WARN,
         evidence: lcpRbEvidence.metric ? lcpRbEvidence : undefined,
+        findingStatus: lcpImpactVerified ? 'verified' : 'suspected',
       },
     ];
 
@@ -206,6 +240,7 @@ export const renderBlockingLcpChain = {
         confidence: isHeavy ? 'strong' : 'medium',
         label: `Render-blocking resources block rendering`,
         ruleId: 'lcp-render-blocking-chain',
+        evidence: lcpImpactVerified ? lcpRbEvidence : undefined,
       },
       {
         source: 'blocked-render-rb',
@@ -213,6 +248,7 @@ export const renderBlockingLcpChain = {
         confidence: isHeavy ? 'strong' : 'medium',
         label: 'Render blocking directly increases LCP',
         ruleId: 'lcp-render-blocking-chain',
+        evidence: lcpImpactVerified ? lcpRbEvidence : undefined,
       },
     ];
 
@@ -230,7 +266,7 @@ export const lcpResourceDelayChain = {
 
   applies(features: FeatureSet): boolean {
     const lcp = features.lcpBreakdown;
-    return lcp != null && (lcp.resourceLoadDelay > RESOURCE_DELAY_WARN || lcp.elementRenderDelay > RENDER_DELAY_WARN);
+    return lcp != null && (lcp.resourceLoadDelay > RESOURCE_DELAY_WARN || lcp.resourceLoadTime > 1000);
   },
 
   build(features: FeatureSet): { nodes: CausalNode[]; edges: CausalEdge[] } {

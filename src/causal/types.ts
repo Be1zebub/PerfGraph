@@ -26,11 +26,36 @@ export type Severity = z.infer<typeof SeveritySchema>;
 export const NodeTypeSchema = z.enum(['metric', 'bottleneck', 'impact']);
 export type NodeType = z.infer<typeof NodeTypeSchema>;
 
+/** Whether a causal node is directly observed or inferred by a rule. */
+export const NodeBasisSchema = z.enum(['observed', 'inferred']);
+export type NodeBasis = z.infer<typeof NodeBasisSchema>;
+
+/** Whether the finding is directly supported by measured evidence. */
+export const FindingStatusSchema = z.enum(['verified', 'suspected', 'not-applicable']);
+export type FindingStatus = z.infer<typeof FindingStatusSchema>;
+
+export const ImpactSurfaceSchema = z.enum([
+  'initial-viewport',
+  'lcp',
+  'interaction',
+  'total-page',
+  'unknown',
+]);
+export type ImpactSurface = z.infer<typeof ImpactSurfaceSchema>;
+
 // ---------------------------------------------------------------------------
 // Evidence — optional payload attached to a causal node
 // ---------------------------------------------------------------------------
 
 /** Evidence payload attached to a causal node */
+export const EvidenceSourceSchema = z.enum([
+  'trace',
+  'lighthouse',
+  'network',
+  'field',
+  'mixed',
+]);
+
 export const EvidenceSchema = z.object({
   /** Affected URLs (e.g. render-blocking resource URLs) */
   urls: z.array(z.string()).optional(),
@@ -44,6 +69,10 @@ export const EvidenceSchema = z.object({
       name: z.string(),
       value: z.number(),
       unit: z.string(),
+      /** Measurement provenance, not an inferred causal relationship. */
+      source: EvidenceSourceSchema.optional(),
+      /** Short description of how the value was obtained. */
+      method: z.string().optional(),
     })
     .optional(),
 });
@@ -57,6 +86,10 @@ export const CausalNodeSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
   type: NodeTypeSchema,
+  /** Provenance of the node itself, separate from causal confidence. */
+  basis: NodeBasisSchema.optional(),
+  findingStatus: FindingStatusSchema.optional(),
+  impactSurface: ImpactSurfaceSchema.optional(),
   severity: SeveritySchema.optional(),
   /** Raw metric value (e.g. 3200 for TTFB in ms) */
   value: z.number().optional(),
@@ -81,6 +114,9 @@ export const CausalEdgeSchema = z.object({
   label: z.string().min(1),
   /** ID of the rule that generated this edge */
   ruleId: z.string().min(1),
+  evidence: EvidenceSchema.optional(),
+  basis: NodeBasisSchema.optional(),
+  findingStatus: FindingStatusSchema.optional(),
 });
 export type CausalEdge = z.infer<typeof CausalEdgeSchema>;
 

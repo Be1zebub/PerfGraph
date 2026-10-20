@@ -2,8 +2,8 @@
  * Critical Path Length extractor.
  *
  * Computes metrics from the critical path chain derived in the Network IR:
- * total chain length (duration sum), request counts, depth, and longest
- * single request.
+ * aggregate request duration, elapsed longest dependency path, request
+ * counts, depth, and longest single request.
  */
 
 import type { IRBundle, NormalizedRequest, CriticalPathTreeNode } from '../normalize/types.js';
@@ -34,6 +34,7 @@ function isBlocking(req: NormalizedRequest): boolean {
  */
 interface WalkResult {
   totalChainLength: number;
+  elapsedCriticalPathMs: number;
   blockingCount: number;
   nonBlockingCount: number;
   longestSingleRequest: number;
@@ -49,6 +50,7 @@ function walkTree(
   reqMap: Map<string, NormalizedRequest>,
 ): WalkResult {
   let totalChainLength = 0;
+  let elapsedCriticalPathMs = 0;
   let blockingCount = 0;
   let nonBlockingCount = 0;
   let longestSingleRequest = 0;
@@ -60,6 +62,7 @@ function walkTree(
     anyMatched = true;
     const dur = safe(req.duration);
     totalChainLength += dur;
+    elapsedCriticalPathMs = dur;
     longestSingleRequest = Math.max(longestSingleRequest, dur);
     requestCount++;
     if (isBlocking(req)) {
@@ -72,6 +75,10 @@ function walkTree(
   for (const child of node.children ?? []) {
     const childResult = walkTree(child, reqMap);
     totalChainLength += childResult.totalChainLength;
+    elapsedCriticalPathMs = Math.max(
+      elapsedCriticalPathMs,
+      (req ? safe(req.duration) : 0) + childResult.elapsedCriticalPathMs,
+    );
     blockingCount += childResult.blockingCount;
     nonBlockingCount += childResult.nonBlockingCount;
     longestSingleRequest = Math.max(longestSingleRequest, childResult.longestSingleRequest);
@@ -79,7 +86,7 @@ function walkTree(
     anyMatched = anyMatched || childResult.anyMatched;
   }
 
-  return { totalChainLength, blockingCount, nonBlockingCount, longestSingleRequest, requestCount, anyMatched };
+  return { totalChainLength, elapsedCriticalPathMs, blockingCount, nonBlockingCount, longestSingleRequest, requestCount, anyMatched };
 }
 
 /**
@@ -108,6 +115,9 @@ export function extractCriticalPath(ir: IRBundle): CriticalPath | undefined {
 
   return {
     totalChainLength: result.totalChainLength,
+    elapsedCriticalPathMs: result.elapsedCriticalPathMs,
+    aggregateRequestDurationMs: result.totalChainLength,
+    pageLifecycleMs: getPageLifecycleMs(ir),
     requestCount: result.requestCount,
     blockingCount: result.blockingCount,
     nonBlockingCount: result.nonBlockingCount,
@@ -115,4 +125,11 @@ export function extractCriticalPath(ir: IRBundle): CriticalPath | undefined {
     longestSingleRequest: result.longestSingleRequest,
     urlsOnLongestPath: cpInfo.urlsOnLongestPath?.length ? cpInfo.urlsOnLongestPath : undefined,
   };
+}
+
+function getPageLifecycleMs(ir: IRBundle): number | undefined {
+  const networkEnd = ir.network.requests.reduce((max, request) => Math.max(max, safe(request.endTime)), 0);
+  const loadEnd = safe(ir.performance.navigation.loadEventEnd);
+  const lifecycle = Math.max(networkEnd, loadEnd);
+  return lifecycle > 0 ? lifecycle : undefined;
 }

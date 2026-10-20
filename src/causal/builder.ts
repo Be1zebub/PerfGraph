@@ -60,7 +60,33 @@ function mergeNodes(existing: CausalNode, incoming: CausalNode): CausalNode {
     value: incoming.value ?? existing.value,
     unit: incoming.unit ?? existing.unit,
     threshold: incoming.threshold ?? existing.threshold,
+    basis: incoming.basis ?? existing.basis,
   };
+}
+
+function withBasis(node: CausalNode): CausalNode {
+  return {
+    ...node,
+    basis: node.basis ?? (node.evidence ? 'observed' : 'inferred'),
+    findingStatus: node.findingStatus ?? (node.evidence ? 'verified' : 'suspected'),
+    impactSurface: node.impactSurface ?? inferImpactSurface(node.id),
+  };
+}
+
+function withEdgeStatus(edge: CausalEdge): CausalEdge {
+  return {
+    ...edge,
+    basis: edge.basis ?? (edge.evidence ? 'observed' : 'inferred'),
+    findingStatus: edge.findingStatus ?? (edge.evidence ? 'verified' : 'suspected'),
+  };
+}
+
+function inferImpactSurface(nodeId: string): 'initial-viewport' | 'lcp' | 'interaction' | 'total-page' | 'unknown' {
+  if (nodeId.includes('lcp') || nodeId.includes('render')) return 'lcp';
+  if (nodeId.includes('inp') || nodeId.includes('tbt') || nodeId.includes('main-thread') || nodeId.includes('js-') || nodeId.includes('script')) return 'interaction';
+  if (nodeId.includes('cls') || nodeId.includes('layout') || nodeId.includes('dom')) return 'initial-viewport';
+  if (nodeId.includes('load') || nodeId.includes('chain') || nodeId.includes('request') || nodeId.includes('waterfall')) return 'total-page';
+  return 'unknown';
 }
 
 // ---------------------------------------------------------------------------
@@ -90,7 +116,8 @@ export function buildCausalGraph(features: FeatureSet): CausalGraph {
     const { nodes, edges } = rule.build(features);
 
     // Add nodes (deduplicate by id)
-    for (const node of nodes) {
+    for (const rawNode of nodes) {
+      const node = withBasis(rawNode);
       const existing = nodeMap.get(node.id);
       if (existing) {
         nodeMap.set(node.id, mergeNodes(existing, node));
@@ -101,13 +128,15 @@ export function buildCausalGraph(features: FeatureSet): CausalGraph {
     }
 
     // Add edges
-    for (const edge of edges) {
+    for (const rawEdge of edges) {
+      const edge = withEdgeStatus(rawEdge);
       // Ensure both endpoints exist in the graph
       if (!nodeMap.has(edge.source)) {
         const fallback: CausalNode = {
           id: edge.source,
           label: edge.source,
           type: 'bottleneck',
+          basis: 'inferred',
         };
         nodeMap.set(edge.source, fallback);
         g.setNode(edge.source, fallback);
@@ -117,6 +146,7 @@ export function buildCausalGraph(features: FeatureSet): CausalGraph {
           id: edge.target,
           label: edge.target,
           type: 'impact',
+          basis: 'inferred',
         };
         nodeMap.set(edge.target, fallback);
         g.setNode(edge.target, fallback);

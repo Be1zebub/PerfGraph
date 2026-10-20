@@ -117,6 +117,15 @@ describe('buildCausalGraph', () => {
         elementRenderDelay: 300,
         totalLCP: 4000,
       },
+      renderBlocking: {
+        blockingRequestCount: 1,
+        blockingBytes: 20000,
+        blockingDuration: 500,
+        renderBlockingScore: 0.95,
+        resources: [
+          { url: 'https://example.com/style.css', resourceType: 'Stylesheet' },
+        ],
+      },
     });
 
     const graph = buildCausalGraph(features);
@@ -131,6 +140,33 @@ describe('buildCausalGraph', () => {
     // TTFB edge should be 'strong' (above crit threshold)
     const ttfbEdge = graph.edges.find((e) => e.source === 'high-ttfb');
     expect(ttfbEdge?.confidence).toBe('strong');
+  });
+
+  it('does not infer CSS or render blocking from TTFB alone', () => {
+    const features = baseFeatures({
+      lcpBreakdown: {
+        ttfb: 900,
+        resourceLoadDelay: 0,
+        resourceLoadTime: 0,
+        elementRenderDelay: 0,
+        totalLCP: 900,
+        lcpElement: { selector: 'p' },
+      },
+      renderBlocking: {
+        blockingRequestCount: 0,
+        blockingBytes: 0,
+        blockingDuration: 0,
+        renderBlockingScore: 1,
+      },
+    });
+
+    const graph = buildCausalGraph(features);
+    const nodeIds = graph.nodes.map((node) => node.id);
+
+    expect(nodeIds).toContain('high-ttfb');
+    expect(nodeIds).toContain('delayed-html-parse');
+    expect(nodeIds).not.toContain('delayed-css-discovery');
+    expect(nodeIds).not.toContain('blocked-render');
   });
 
   it('produces render-blocking chain when blocking requests >= 2', () => {
@@ -165,8 +201,8 @@ describe('buildCausalGraph', () => {
 
     const nodeIds = graph.nodes.map((n) => n.id);
     expect(nodeIds).toContain('high-main-thread-blocking');
-    expect(nodeIds).toContain('high-tbt');
-    expect(nodeIds).toContain('delayed-inp-tbt');
+    expect(nodeIds).toContain('main-thread-contention');
+    expect(nodeIds).not.toContain('high-tbt');
   });
 
   it('produces JS hotspots chain when longTaskCount is high', () => {

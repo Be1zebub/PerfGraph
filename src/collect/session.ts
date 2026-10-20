@@ -6,8 +6,30 @@
  */
 
 import { createServer as createTcpServer } from 'net';
+import { existsSync } from 'node:fs';
 import { chromium, devices, type Browser, type BrowserContext, type Page, type CDPSession, type BrowserServer } from 'playwright';
 import ow from 'ow';
+
+/**
+ * Ensure Playwright's Chromium browser binary exists.
+ * Throws a clear error with install instructions if missing.
+ */
+function assertBrowserInstalled(): void {
+  // chromium.executablePath() returns the path Playwright *expects* the binary at.
+  // We check existence before calling launch() to give a readable error instead of
+  // the cryptic "Executable doesn't exist at ..." from browserType.launch.
+  const execPath = chromium.executablePath();
+  if (!existsSync(execPath)) {
+    throw new Error(
+      `Playwright Chromium browser not found at:\n  ${execPath}\n\n` +
+      `This usually happens after a Playwright version update.\n` +
+      `Install the required browser:\n\n` +
+      `  npx playwright install chromium\n\n` +
+      `Or install all browsers:\n\n` +
+      `  npx playwright install`,
+    );
+  }
+}
 
 /** The result of launching a browser and creating a CDP session */
 export interface BrowserSession {
@@ -34,6 +56,7 @@ export interface BrowserSession {
  */
 export async function launchBrowser(timeoutMs = 30_000): Promise<BrowserSession> {
   ow(timeoutMs, 'timeoutMs', ow.number.positive);
+  assertBrowserInstalled();
 
   const browser = await chromium.launch({
     headless: true,
@@ -119,6 +142,7 @@ function findFreePort(): Promise<number> {
  */
 export async function launchBrowserServer(timeoutMs = 30_000, deviceName?: string): Promise<BrowserSession> {
   ow(timeoutMs, 'timeoutMs', ow.number.positive);
+  assertBrowserInstalled();
 
   // Pick a free port for Chrome's CDP debugging server
   const cdpPort = await findFreePort();

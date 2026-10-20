@@ -142,7 +142,7 @@ describe('buildReport', () => {
     expect(parsed.success, 'Report must pass Zod schema validation').toBe(true);
 
     // Meta
-    expect(report.meta.reportVersion).toBe('1.0.0');
+    expect(report.meta.reportVersion).toBe('1.2.0');
     expect(report.meta.graphNodeCount).toBeGreaterThan(0);
     expect(report.meta.graphEdgeCount).toBeGreaterThan(0);
 
@@ -236,6 +236,29 @@ describe('buildReport', () => {
     expect(report.summary.warnings).toBeGreaterThan(0);
   });
 
+  it('keeps a green Lighthouse run good despite a borderline TTFB warning', () => {
+    const features = baseFeatures({
+      lcpBreakdown: {
+        ttfb: 900,
+        resourceLoadDelay: 0,
+        resourceLoadTime: 0,
+        elementRenderDelay: 0,
+        totalLCP: 900,
+        lcpElement: { selector: 'p' },
+      },
+      renderBlocking: {
+        blockingRequestCount: 0,
+        blockingBytes: 0,
+        blockingDuration: 0,
+        renderBlockingScore: 1,
+      },
+    });
+    const report = buildReport(buildCausalGraph(features), features, 1);
+
+    expect(report.summary.score).toBe('good');
+    expect(report.summary.scoreExplanation).toContain('Lighthouse');
+  });
+
   it('computes score=good with no critical or warning issues', () => {
     const features = baseFeatures(); // all values below thresholds
     const graph = buildCausalGraph(features);
@@ -326,6 +349,51 @@ describe('buildReport', () => {
     expect(report.recommendations.length).toBe(0);
   });
 
+  it('does not recommend derived bottlenecks without observed evidence', () => {
+    const features = baseFeatures({
+      lcpBreakdown: {
+        ttfb: 900,
+        resourceLoadDelay: 0,
+        resourceLoadTime: 0,
+        elementRenderDelay: 0,
+        totalLCP: 900,
+        lcpElement: { selector: 'p' },
+      },
+      renderBlocking: {
+        blockingRequestCount: 0,
+        blockingBytes: 0,
+        blockingDuration: 0,
+        renderBlockingScore: 1,
+      },
+    });
+    const report = buildReport(buildCausalGraph(features), features);
+
+    expect(report.recommendations.map((rec) => rec.title)).not.toContain('Delayed CSS discovery');
+    expect(report.recommendations.map((rec) => rec.title)).not.toContain('Increased LCP');
+  });
+
+  it('does not recommend JavaScript fixes from busy time without JS evidence', () => {
+    const features: FeatureSet = {
+      lcpBreakdown: {
+        ttfb: 200,
+        resourceLoadDelay: 0,
+        resourceLoadTime: 0,
+        elementRenderDelay: 0,
+        totalLCP: 200,
+      },
+      mainThreadBlocking: {
+        blockingScore: 0.8,
+        busyMs: 1200,
+        idleMs: 300,
+        blockingRatio: 0.8,
+        categories: {},
+      },
+    };
+    const report = buildReport(buildCausalGraph(features), features);
+
+    expect(report.recommendations.map((rec) => rec.category)).not.toContain('JavaScript');
+  });
+
   it('handles graph with a single chain correctly', () => {
     const features = baseFeatures({
       renderBlocking: {
@@ -377,7 +445,7 @@ describe('buildReport', () => {
     expect(mtbIssue).toBeDefined();
     expect(mtbIssue!.evidence).toBeDefined();
     expect(mtbIssue!.evidence!.metric).toBeDefined();
-    expect(mtbIssue!.evidence!.metric!.name).toBe('Main thread blocking');
+    expect(mtbIssue!.evidence!.metric!.name).toBe('Main thread busy time');
     expect(mtbIssue!.evidence!.metric!.unit).toBe('ms');
 
     // high-main-thread-blocking remediation should include the metric value
@@ -396,5 +464,42 @@ describe('buildReport', () => {
         features.lcpBreakdown.totalLCP,
       );
     }
+  });
+
+  it('reports partial data quality without treating busyMs as TBT', () => {
+    const features = baseFeatures({
+      lcpBreakdown: {
+        ttfb: 200,
+        resourceLoadDelay: 100,
+        resourceLoadTime: 300,
+        elementRenderDelay: 50,
+        totalLCP: 650,
+        source: 'trace',
+      },
+    });
+    const report = buildReport(buildCausalGraph(features), features);
+
+    expect(report.summary.dataQuality?.status).toBe('partial');
+    expect(report.summary.dataQuality?.warnings).toContain(
+      'Measured TBT is unavailable; busyMs is not used as a TBT substitute.',
+    );
+  });
+
+  it('preserves metric provenance in evidence', () => {
+    const features = baseFeatures({
+      lcpBreakdown: {
+        ttfb: 1200,
+        resourceLoadDelay: 0,
+        resourceLoadTime: 0,
+        elementRenderDelay: 0,
+        totalLCP: 1200,
+        source: 'lighthouse',
+      },
+    });
+    const report = buildReport(buildCausalGraph(features), features);
+    const ttfb = report.issues.find((issue) => issue.id === 'high-ttfb');
+
+    expect(ttfb?.evidence?.metric?.source).toBe('lighthouse');
+    expect(ttfb?.evidence?.metric?.method).toBe('LCP breakdown TTFB component');
   });
 });

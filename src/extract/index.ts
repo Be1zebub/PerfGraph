@@ -24,6 +24,7 @@ import { extractRenderBlocking } from './render-blocking.js';
 export function extract(ir: IRBundle): FeatureSet {
   return {
     url: ir.meta.url || undefined,
+    runContext: ir.meta.context,
     lcpBreakdown: extractLCPBreakdown(ir),
     criticalPath: extractCriticalPath(ir),
     mainThreadBlocking: extractMainThreadBlocking(ir),

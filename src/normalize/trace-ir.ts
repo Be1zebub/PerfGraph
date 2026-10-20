@@ -118,12 +118,17 @@ function buildCoreWebVitals(
         break;
       }
       case 'LongTask': {
-        const dur = ev.dur;
-        if (isNumber(dur)) {
-          const blocking = dur - 50; // tasks over 50ms are "long"
-          if (blocking > 0) {
-            tbt += blocking / 1000; // dur is in microseconds, convert to ms
-          }
+        // LongTask instant events expose duration in seconds under args;
+        // complete trace events may expose dur in microseconds.
+        const durationMs = isNumber(ev.dur)
+          ? ev.dur / 1000
+          : (() => {
+              const duration = getArg(ev.args, ['duration']);
+              return isNumber(duration) ? duration * 1000 : undefined;
+            })();
+        if (durationMs !== undefined) {
+          const blocking = durationMs - 50;
+          if (blocking > 0) tbt += blocking;
         }
         break;
       }

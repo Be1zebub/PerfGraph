@@ -77,9 +77,10 @@ export function toRelativeMs(
     case 'network-monotonic-s': {
       // Network events use a monotonic seconds clock anchored to a wall time.
       // The wall-time offset is derived from the first request's wallTime.
-      const wallOffset = anchor.firstRequestWallTime ?? 0;
-      result =
-        raw * 1000 + (anchor.navigationStart - wallOffset * 1000);
+      // Network.requestTime is also a monotonic-seconds value. Normalize it
+      // against the monotonic navigationStart; wallTime is epoch time and
+      // cannot be subtracted from this clock domain.
+      result = raw * 1000 - anchor.navigationStart;
       break;
     }
 
@@ -107,7 +108,7 @@ export function toRelativeMs(
 /**
  * Resolve a ClockAnchor from a RawDataBundle.
  *
- * navigationStart is extracted from the performance metrics (Timestamp metric)
+ * navigationStart is extracted from the performance metrics (in seconds)
  * or falls back to 0. firstRequestWallTime is taken from the first network
  * request's wallTime field if available.
  */
@@ -123,7 +124,20 @@ export function resolveClockAnchor(raw: RawDataBundle): ClockAnchor {
       (m) => m.name === 'NavigationStart',
     );
     if (navStartMetric) {
-      navigationStart = navStartMetric.value;
+      const rawNavigationStart = navStartMetric.value;
+      const traceData = raw.trace as { events?: Array<{ name?: string; ts?: number }> } | undefined;
+      const traceNavigationStart = traceData?.events?.find((event) => event.name === 'navigationStart')?.ts;
+      const traceNavigationMs = typeof traceNavigationStart === 'number' ? traceNavigationStart / 1000 : undefined;
+      // Real CDP Performance values are seconds, while older synthetic
+      // fixtures may already use milliseconds. Prefer the scale that agrees
+      // with the trace navigation marker when one is available.
+      if (traceNavigationMs !== undefined) {
+        const asMs = Math.abs(traceNavigationMs - rawNavigationStart);
+        const asSeconds = Math.abs(traceNavigationMs - rawNavigationStart * 1000);
+        navigationStart = asMs <= asSeconds ? rawNavigationStart : rawNavigationStart * 1000;
+      } else {
+        navigationStart = rawNavigationStart * 1000;
+      }
     }
   }
 

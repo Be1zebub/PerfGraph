@@ -102,6 +102,23 @@ describe('computeScore (backward compat — no lighthouse data)', () => {
     expect(computeScore(graphWithWarnings(1))).toBe('moderate');
   });
 
+  it('does not downgrade for borderline TTFB alone', () => {
+    const graph: CausalGraph = {
+      nodes: [{
+        id: 'high-ttfb',
+        label: 'TTFB exceeds normal threshold',
+        type: 'metric',
+        severity: 'warning',
+        value: 900,
+        unit: 'ms',
+      }],
+      edges: [],
+      metadata: { totalRules: 1, firedRules: 1 },
+    };
+
+    expect(computeScore(graph)).toBe('good');
+  });
+
   it('returns "good" when only info nodes exist', () => {
     const graph: CausalGraph = {
       nodes: [

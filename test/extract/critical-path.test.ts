@@ -102,6 +102,10 @@ describe('extractCriticalPath', () => {
     expect(result).toBeDefined();
     // totalChainLength = 200 + 200 + 400 = 800
     expect(result!.totalChainLength).toBe(800);
+    expect(result!.aggregateRequestDurationMs).toBe(800);
+    // The stylesheet and script are parallel branches; elapsed path uses the longer branch.
+    expect(result!.elapsedCriticalPathMs).toBe(600);
+    expect(result!.pageLifecycleMs).toBe(1300);
     expect(result!.requestCount).toBe(3);
     // blocking: Document(1) + Stylesheet(1) + Script VeryHigh(1) = 3
     expect(result!.blockingCount).toBe(3);
@@ -110,6 +114,22 @@ describe('extractCriticalPath', () => {
     expect(result!.deepestChainDepth).toBe(2);
     // longest single request = app.js 400
     expect(result!.longestSingleRequest).toBe(400);
+  });
+
+  it('separates aggregate parallel work from elapsed critical-path time', () => {
+    const ir = makeIRBundle({
+      network: {
+        requests: [
+          { url: 'https://example.com/', method: 'GET', resourceType: 'Document', statusCode: 200, startTime: 0, endTime: 100, duration: 100, bytes: 1, priority: 'VeryHigh', initiator: '', failed: false, timing: {} },
+          { url: 'https://example.com/a.css', method: 'GET', resourceType: 'Stylesheet', statusCode: 200, startTime: 10, endTime: 410, duration: 400, bytes: 1, priority: 'High', initiator: '', failed: false, timing: {} },
+          { url: 'https://example.com/b.js', method: 'GET', resourceType: 'Script', statusCode: 200, startTime: 10, endTime: 210, duration: 200, bytes: 1, priority: 'High', initiator: '', failed: false, timing: {} },
+        ],
+        summary: { totalRequests: 3, totalBytes: 3, byType: {}, byPriority: {}, criticalPath: { tree: { url: 'https://example.com/', children: [{ url: 'https://example.com/a.css' }, { url: 'https://example.com/b.js' }] }, depth: 2, urlsOnLongestPath: [] }, longestChain: { url: 'https://example.com/a.css', length: 400 } },
+      },
+    });
+    const result = extractCriticalPath(ir)!;
+    expect(result.aggregateRequestDurationMs).toBe(700);
+    expect(result.elapsedCriticalPathMs).toBe(500);
   });
 
   // ---------------------------------------------------------------------------

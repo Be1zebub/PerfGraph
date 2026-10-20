@@ -43,6 +43,13 @@ export function extractMainThreadBlocking(ir: IRBundle): MainThreadBlocking | un
   return {
     blockingScore,
     busyMs,
+    tbtMs: ir.performance.coreWebVitals.tbt !== undefined &&
+      Number.isFinite(ir.performance.coreWebVitals.tbt)
+      ? ir.performance.coreWebVitals.tbt
+      : undefined,
+    tbtStatus: ir.performance.coreWebVitals.tbt !== undefined &&
+      Number.isFinite(ir.performance.coreWebVitals.tbt) ? 'measured' : 'unavailable',
+    busyStatus: 'measured',
     idleMs,
     blockingRatio,
     categories: { ...traceSummary.threadActivity.byCategory },

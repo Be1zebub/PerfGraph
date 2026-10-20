@@ -26,6 +26,8 @@ import { ConsoleCollector } from './console.js';
 import { DOMCollector } from './dom.js';
 import { LighthouseCollector } from './lighthouse.js';
 import { createOutputDir, writeJsonFile, writeWarnings } from '../output/writer.js';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import type { RawDataBundle, Collector } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -207,6 +209,20 @@ async function runOnce(
   // --- Phase 2: Launch browser + CDP session ---
   console.error(`[${runIndex}] Launching browser...`);
   const { browser, page, cdp, cdpPort } = await launchBrowserServer(30_000, options.mobile);
+  const viewport = page.viewportSize();
+  (bundle as Record<string, unknown>).context = {
+    browser: browser.version(),
+    os: `${process.platform} ${process.arch}`,
+    device: options.mobile ?? 'desktop',
+    viewport: viewport ?? undefined,
+    cacheState: 'cold',
+    networkThrottling: 'none',
+    cpuThrottling: 'none',
+    headless: true,
+    runIndex,
+    requestedRuns: options.runs,
+    ownedDomains: options.ownedDomains,
+  };
 
   try {
     // --- Phase 3: Determine which CDP collectors to run ---
@@ -384,6 +400,30 @@ export async function run(
     const summaryDir = results.find((r) => r.outputDir)?.outputDir;
     if (summaryDir) {
       const parentDir = summaryDir.substring(0, summaryDir.lastIndexOf('\\'));
+      const runMetrics = await Promise.all(results.map(async (result) => {
+        if (!result.success || !result.outputDir) return { run: result.index, lcpMs: null, fcpMs: null, cls: null, tbtMs: null };
+        try {
+          const raw = JSON.parse(await readFile(resolve(result.outputDir, 'lighthouse.json'), 'utf8')) as Record<string, unknown>;
+          const lhr = raw.lhr && typeof raw.lhr === 'object' ? raw.lhr as Record<string, unknown> : raw;
+          const audits = lhr.audits && typeof lhr.audits === 'object' ? lhr.audits as Record<string, unknown> : {};
+          const value = (id: string): number | null => {
+            const audit = audits[id];
+            if (!audit || typeof audit !== 'object') return null;
+            const numericValue = (audit as Record<string, unknown>).numericValue;
+            return typeof numericValue === 'number' && Number.isFinite(numericValue) ? numericValue : null;
+          };
+          return { run: result.index, lcpMs: value('largest-contentful-paint'), fcpMs: value('first-contentful-paint'), cls: value('cumulative-layout-shift'), tbtMs: value('total-blocking-time') };
+        } catch {
+          return { run: result.index, lcpMs: null, fcpMs: null, cls: null, tbtMs: null };
+        }
+      }));
+      const summarize = (key: 'lcpMs' | 'fcpMs' | 'cls' | 'tbtMs') => {
+        const values = runMetrics.map((metric) => metric[key]).filter((value): value is number => value != null);
+        if (values.length === 0) return null;
+        const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+        const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length;
+        return { samples: values.length, min: Math.min(...values), max: Math.max(...values), mean, standardDeviation: Math.sqrt(variance) };
+      };
       const summary = {
         url,
         runs: options.runs,
@@ -400,6 +440,13 @@ export async function run(
           successCount: results.filter((r) => r.success).length,
           failureCount: results.filter((r) => !r.success).length,
           totalWarnings: results.reduce((sum, r) => sum + r.warningCount, 0),
+        },
+        runMetrics,
+        variance: {
+          lcpMs: summarize('lcpMs'),
+          fcpMs: summarize('fcpMs'),
+          cls: summarize('cls'),
+          tbtMs: summarize('tbtMs'),
         },
       };
       const summaryPath = await writeJsonFile(options.output, 'runs-summary.json', summary);

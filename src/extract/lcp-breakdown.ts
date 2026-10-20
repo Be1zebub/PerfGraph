@@ -25,7 +25,20 @@ function findDocumentRequest(requests: NormalizedRequest[]): NormalizedRequest |
  * Chrome LCP is typically the largest image (by bytes) or a text node.
  * Returns undefined for text-only LCP.
  */
-function findLcpResource(requests: NormalizedRequest[]): NormalizedRequest | undefined {
+function findLcpResource(ir: IRBundle): NormalizedRequest | undefined {
+  const requests = ir.network.requests;
+  const nodeLabel = ir.lighthouse.lcpElementNodeLabel?.toLowerCase() ?? '';
+  const snippet = ir.lighthouse.lcpElementSnippet?.toLowerCase() ?? '';
+  const selector = ir.lighthouse.lcpElementSelector?.toLowerCase() ?? '';
+  if (nodeLabel && !['img', 'image', 'video', 'svg'].some((kind) => nodeLabel.includes(kind))) {
+    return undefined;
+  }
+  if (snippet && !snippet.includes('<img') && !snippet.includes('<video') && !snippet.includes('<svg')) {
+    return undefined;
+  }
+  if (selector && /(^|\s|[#.])(?:p|h[1-6]|div|span|section|article)(\s|$)/.test(selector)) {
+    return undefined;
+  }
   const images = requests.filter((r) => r.resourceType === 'Image' && !r.failed);
   if (images.length === 0) return undefined;
   return images.reduce((a, b) => (a.bytes >= b.bytes ? a : b));
@@ -82,7 +95,7 @@ export function extractLCPBreakdown(ir: IRBundle): LCPBreakdown | undefined {
     hasLighthouse ? 'lighthouse' : 'trace';
 
   const ttfb = extractTTFB(ir);
-  const lcpResource = findLcpResource(ir.network.requests);
+  const lcpResource = findLcpResource(ir);
 
   // Build lcpElement if Lighthouse provides selector info
   const lcpElement = ir.lighthouse.lcpElementSelector

@@ -55,10 +55,17 @@ export const tbtInpChain = {
   build(features: FeatureSet): { nodes: CausalNode[]; edges: CausalEdge[] } {
     const mt = features.mainThreadBlocking!;
     const busyMs = mt.busyMs;
+    const tbtMs = mt.tbtMs;
     const conf = confidenceFromDelta(busyMs, 300, 1000);
 
     const mtbEvidence: Evidence = {
-      metric: { name: 'Main thread blocking', value: busyMs, unit: 'ms' },
+      metric: {
+        name: 'Main thread busy time',
+        value: busyMs,
+        unit: 'ms',
+        source: 'trace',
+        method: 'Trace main-thread activity total',
+      },
     };
 
     const nodes: CausalNode[] = [
@@ -72,39 +79,63 @@ export const tbtInpChain = {
         threshold: 300,
         evidence: mtbEvidence,
       },
-      {
+    ];
+
+    const edges: CausalEdge[] = [];
+
+    if (tbtMs != null) {
+      nodes.push({
         id: 'high-tbt',
         label: 'High Total Blocking Time',
         type: 'bottleneck',
-        severity: busyMs >= 1000 ? 'critical' : 'warning',
-        value: busyMs,
+        severity: tbtMs >= TBT_CRIT ? 'critical' : 'warning',
+        value: tbtMs,
         unit: 'ms',
         threshold: TBT_WARN,
-      },
-      {
+        evidence: {
+          metric: { name: 'Total Blocking Time', value: tbtMs, unit: 'ms' },
+        },
+      });
+      nodes.push({
         id: 'delayed-inp-tbt',
         label: 'Possible INP delay',
         type: 'impact',
         severity: 'warning',
-      },
-    ];
-
-    const edges: CausalEdge[] = [
-      {
+      });
+      edges.push(
+        {
+          source: 'high-main-thread-blocking',
+          target: 'high-tbt',
+          confidence: confidenceFromDelta(tbtMs, TBT_WARN, TBT_CRIT),
+          label: 'Measured main-thread activity is consistent with TBT',
+          ruleId: 'js-tbt-inp-chain',
+        },
+        {
+          source: 'high-tbt',
+          target: 'delayed-inp-tbt',
+          confidence: 'medium',
+          label: 'High TBT may delay input processing',
+          ruleId: 'js-tbt-inp-chain',
+        },
+      );
+    } else {
+      nodes.push({
+        id: 'main-thread-contention',
+        label: 'Main-thread contention signal (TBT unavailable)',
+        type: 'bottleneck',
+        severity: busyMs >= 1000 ? 'critical' : 'warning',
+        value: busyMs,
+        unit: 'ms',
+        threshold: 300,
+      });
+      edges.push({
         source: 'high-main-thread-blocking',
-        target: 'high-tbt',
+        target: 'main-thread-contention',
         confidence: conf,
-        label: 'Main thread blocking increases TBT',
+        label: 'Busy main-thread time indicates contention',
         ruleId: 'js-tbt-inp-chain',
-      },
-      {
-        source: 'high-tbt',
-        target: 'delayed-inp-tbt',
-        confidence: 'medium',
-        label: 'High TBT proxies for INP delay (correlation confirmed)',
-        ruleId: 'js-tbt-inp-chain',
-      },
-    ];
+      });
+    }
 
     return { nodes, edges };
   },

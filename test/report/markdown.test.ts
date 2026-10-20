@@ -71,6 +71,18 @@ describe('buildReportMarkdown', () => {
     expect(md).toContain('| Info |');
   });
 
+  it('renders report data quality warnings', () => {
+    const report = minimalReport();
+    report.summary.dataQuality = {
+      status: 'partial',
+      warnings: ['Measured TBT is unavailable.'],
+    };
+    const md = buildReportMarkdown(report);
+
+    expect(md).toContain('**Data quality:** partial');
+    expect(md).toContain('Measured TBT is unavailable.');
+  });
+
   it('includes issues when present', () => {
     const report = minimalReport();
     report.issues = [

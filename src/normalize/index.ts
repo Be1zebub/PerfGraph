@@ -117,8 +117,9 @@ export function normalize(raw: RawDataBundle): IRBundle {
   const meta: IRMeta = {
     url: firstRequestUrl,
     fetchedAt: new Date().toISOString(),
-    navigationStart: navStartMetric?.value ?? 0,
+    navigationStart: anchor.navigationStart,
     irVersion: '1.0.0',
+    context: raw.context,
   };
 
   // 6. Build and validate IRBundle

@@ -7,6 +7,7 @@
  */
 
 import { z } from 'zod';
+import { RunContextSchema } from '../normalize/types.js';
 
 // ---------------------------------------------------------------------------
 // LCP Breakdown (FEA-01)
@@ -33,7 +34,14 @@ export const LCPBreakdownSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const CriticalPathSchema = z.object({
+  /** Sum of durations for all matched requests in the dependency tree. */
   totalChainLength: z.number(),
+  /** Longest root-to-leaf dependency path; not a sum of parallel branches. */
+  elapsedCriticalPathMs: z.number(),
+  /** Aggregate request duration across the tree; parallel work is intentionally included. */
+  aggregateRequestDurationMs: z.number(),
+  /** Observed page/network lifecycle span when available. */
+  pageLifecycleMs: z.number().optional(),
   requestCount: z.number(),
   blockingCount: z.number(),
   nonBlockingCount: z.number(),
@@ -50,6 +58,10 @@ export const CriticalPathSchema = z.object({
 export const MainThreadBlockingSchema = z.object({
   blockingScore: z.number().min(0).max(1),
   busyMs: z.number(),
+  /** Measured Total Blocking Time, when available from the performance IR. */
+  tbtMs: z.number().optional(),
+  tbtStatus: z.enum(['measured', 'unavailable']),
+  busyStatus: z.literal('measured'),
   idleMs: z.number(),
   blockingRatio: z.number().min(0).max(1),
   categories: z.record(z.string(), z.number()),
@@ -88,6 +100,14 @@ export const ThirdPartyCategorySchema = z.object({
   duration: z.number(),
 });
 
+export const OwnershipCategorySchema = z.enum([
+  'first-party',
+  'first-party-cdn',
+  'third-party-vendor',
+  'external-cdn',
+  'unknown',
+]);
+
 export const ThirdPartyOverheadSchema = z.object({
   totalThirdPartyRequests: z.number(),
   totalThirdPartyBytes: z.number(),
@@ -96,6 +116,8 @@ export const ThirdPartyOverheadSchema = z.object({
   firstPartyRequests: z.number(),
   thirdPartyRatio: z.number().min(0).max(1),
   byCategory: z.record(z.string(), ThirdPartyCategorySchema),
+  /** Request ownership buckets, separate from vendor technology categories. */
+  byOwnership: z.record(z.string(), ThirdPartyCategorySchema),
 });
 
 // ---------------------------------------------------------------------------
@@ -115,8 +137,18 @@ export const RenderBlockingScoreSchema = z.object({
   blockingDuration: z.number(),
   renderBlockingScore: z.number().min(0).max(1),
   lhRenderBlockingMs: z.number().optional(),
+  lcpSavingsMs: z.number().optional(),
+  fcpSavingsMs: z.number().optional(),
   resources: z.array(RenderBlockingResourceSchema).optional(),
   totalWastedMs: z.number().optional(),
+  networkResourceCount: z.number(),
+  lighthouseResourceCount: z.number(),
+  sourceConflict: z.boolean(),
+  networkResources: z.array(RenderBlockingResourceSchema),
+  lighthouseResources: z.array(RenderBlockingResourceSchema),
+  networkOnlyCount: z.number(),
+  lighthouseOnlyCount: z.number(),
+  sourceStatus: z.enum(['measured', 'conflicting']),
 });
 
 // ---------------------------------------------------------------------------
@@ -126,6 +158,7 @@ export const RenderBlockingScoreSchema = z.object({
 export const FeatureSetSchema = z.strictObject({
   /** Target URL that was analyzed */
   url: z.string().optional(),
+  runContext: RunContextSchema.optional(),
   lcpBreakdown: LCPBreakdownSchema.optional(),
   criticalPath: CriticalPathSchema.optional(),
   mainThreadBlocking: MainThreadBlockingSchema.optional(),
@@ -141,6 +174,7 @@ export type MainThreadBlocking = z.infer<typeof MainThreadBlockingSchema>;
 export type JSHotspots = z.infer<typeof JSHotspotsSchema>;
 export type LayoutShifts = z.infer<typeof LayoutShiftsSchema>;
 export type ThirdPartyCategory = z.infer<typeof ThirdPartyCategorySchema>;
+export type OwnershipCategory = z.infer<typeof OwnershipCategorySchema>;
 export type ThirdPartyOverhead = z.infer<typeof ThirdPartyOverheadSchema>;
 export type RenderBlockingResource = z.infer<typeof RenderBlockingResourceSchema>;
 export type RenderBlockingScore = z.infer<typeof RenderBlockingScoreSchema>;

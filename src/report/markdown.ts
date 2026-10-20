@@ -77,6 +77,13 @@ export function buildReportMarkdown(
   lines.push(`| Warnings | ${report.summary.warnings} |`);
   lines.push(`| Info | ${report.summary.infos} |`);
   lines.push('');
+  if (report.summary.dataQuality) {
+    lines.push(`**Data quality:** ${report.summary.dataQuality.status}`);
+    for (const warning of report.summary.dataQuality.warnings) {
+      lines.push(`- ${warning}`);
+    }
+    lines.push('');
+  }
 
   // -----------------------------------------------------------------------
   // Top Issues
@@ -105,6 +112,9 @@ export function buildReportMarkdown(
       lines.push('');
       lines.push(`**ID:** \`${issue.id}\``);
       lines.push(`**Severity:** ${issue.severity}`);
+      lines.push(`**Finding status:** ${issue.findingStatus}`);
+      lines.push(`**Basis:** ${issue.basis}`);
+      lines.push(`**Impact surface:** ${issue.impactSurface}`);
       if (issue.value != null) {
         lines.push(
           `**Value:** ${issue.value}${issue.unit ? ` ${issue.unit}` : ''}`,
@@ -140,9 +150,13 @@ export function buildReportMarkdown(
       lines.push('');
       lines.push(`**Impact:** ${chain.impact}`);
       lines.push(`**Confidence:** ${chain.confidence}`);
+      lines.push(`**Finding statuses:** ${chain.path.map((n) => n.findingStatus).join(', ')}`);
       lines.push(
         `**Path:** \`${chain.path.map((n) => n.label).join(' → ')}\``,
       );
+      if (chain.relations?.some((relation) => relation.findingStatus === 'suspected')) {
+        lines.push('**Causal qualification:** This chain contains inferred relationships; treat them as hypotheses to verify.');
+      }
       lines.push('');
     }
   }
@@ -161,7 +175,9 @@ export function buildReportMarkdown(
       if (rec.expectedImpact) {
         lines.push('');
         lines.push(`**Expected impact:** ${rec.expectedImpact}`);
+        lines.push(`**Expected impact status:** ${rec.expectedImpactStatus}`);
       }
+      if (rec.verification) lines.push(`**Verification:** ${rec.verification}`);
       lines.push('');
     }
   }

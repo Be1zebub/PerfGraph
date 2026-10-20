@@ -9,7 +9,8 @@
  */
 
 import { z } from 'zod';
-import { EvidenceSchema } from '../causal/types.js';
+import { EvidenceSchema, FindingStatusSchema, ImpactSurfaceSchema, NodeBasisSchema } from '../causal/types.js';
+import { RunContextSchema } from '../normalize/types.js';
 
 // ---------------------------------------------------------------------------
 // ReportMeta
@@ -30,6 +31,7 @@ export const ReportMetaSchema = z.object({
   graphEdgeCount: z.number().nonnegative(),
   /** Number of causal rules evaluated */
   ruleCount: z.number().nonnegative(),
+  runContext: RunContextSchema.optional(),
 });
 export type ReportMeta = z.infer<typeof ReportMetaSchema>;
 
@@ -63,6 +65,11 @@ export const ReportSummarySchema = z.object({
   lighthousePerformance: z.number().optional(),
   /** Optional explanation when Lighthouse data influenced the score */
   scoreExplanation: z.string().optional(),
+  /** Whether the report has enough measurements for a confident verdict. */
+  dataQuality: z.object({
+    status: z.enum(['complete', 'partial']),
+    warnings: z.array(z.string()),
+  }).optional(),
 });
 export type ReportSummary = z.infer<typeof ReportSummarySchema>;
 
@@ -87,6 +94,10 @@ export const ReportIssueSchema = z.object({
   threshold: z.number().optional(),
   /** Confidence of the causal link leading to this issue */
   confidence: z.string(),
+  /** Whether this issue is observed or inferred by a rule. */
+  basis: NodeBasisSchema,
+  findingStatus: FindingStatusSchema,
+  impactSurface: ImpactSurfaceSchema,
   /** Human-readable remediation recommendation */
   remediation: z.string(),
   /** ID of the causal chain this issue belongs to */
@@ -105,6 +116,9 @@ export const ChainNodeSchema = z.object({
   label: z.string().min(1),
   type: z.string(),
   severity: z.string().optional(),
+  basis: NodeBasisSchema,
+  findingStatus: FindingStatusSchema,
+  impactSurface: ImpactSurfaceSchema,
 });
 export type ChainNode = z.infer<typeof ChainNodeSchema>;
 
@@ -123,6 +137,14 @@ export const CausalChainSchema = z.object({
   path: z.array(ChainNodeSchema),
   /** Number of nodes in the path */
   length: z.number().positive(),
+  relations: z.array(z.object({
+    source: z.string(),
+    target: z.string(),
+    confidence: z.string(),
+    basis: NodeBasisSchema,
+    findingStatus: FindingStatusSchema,
+    evidence: EvidenceSchema.optional(),
+  })).optional(),
 });
 export type CausalChain = z.infer<typeof CausalChainSchema>;
 
@@ -153,8 +175,12 @@ export const RecommendationSchema = z.object({
   action: z.string(),
   /** Expected positive impact */
   expectedImpact: z.string(),
+  expectedImpactStatus: z.enum(['measured', 'estimated', 'unknown']),
   /** IDs of related issues */
   relatedIssues: z.array(z.string()),
+  applicability: z.enum(['applicable', 'not-applicable', 'insufficient-evidence']),
+  evidence: z.array(z.string()).optional(),
+  verification: z.string(),
 });
 export type Recommendation = z.infer<typeof RecommendationSchema>;
 

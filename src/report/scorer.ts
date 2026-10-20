@@ -3,7 +3,7 @@
  *
  * The score is a simple heuristic based on severity distribution:
  *   - Any critical nodes → "poor"
- *   - Any warning nodes  → "moderate"
+ *   - Actionable warning nodes → "moderate"
  *   - Info only / empty  → "good"
  *
  * Optionally accepts a Lighthouse performance score to override the
@@ -42,6 +42,16 @@ function hasGenuineRegression(nodes: CausalNode[]): boolean {
 }
 
 /**
+ * Borderline TTFB is useful diagnostic context, but by itself is not enough to
+ * classify a page as moderately degraded. Other warning nodes remain
+ * actionable unless their rule explicitly defines them as informational.
+ */
+function isActionableWarning(node: CausalNode): boolean {
+  if (node.basis === 'inferred') return false;
+  return !(node.id === 'high-ttfb' && node.value != null && node.value < 2500);
+}
+
+/**
  * Compute overall performance score from a CausalGraph.
  *
  * When `lighthousePerformance` is provided the score may be promoted:
@@ -64,14 +74,10 @@ export function computeScore(
   lighthousePerformance?: number,
 ): ReportScore | { score: ReportScore; explanation?: string } {
   let criticalCount = 0;
-  let warningCount = 0;
 
   for (const node of graph.nodes) {
     if (node.severity === 'critical') {
       criticalCount++;
-    }
-    if (node.severity === 'warning') {
-      warningCount++;
     }
   }
 
@@ -96,8 +102,10 @@ export function computeScore(
     }
   }
 
-  // Fallback heuristic (unchanged from original)
+  // Fallback heuristic: ignore borderline TTFB-only observations.
   if (criticalCount > 0) return 'poor';
-  if (warningCount > 0) return 'moderate';
+  if (graph.nodes.some((node) => node.severity === 'warning' && isActionableWarning(node))) {
+    return 'moderate';
+  }
   return 'good';
 }

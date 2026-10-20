@@ -73,7 +73,7 @@ const KNOWN_ARTIFACTS: ReadonlyArray<{
   {
     filename: 'features.toon',
     description:
-      'Raw diagnostic features: LCP breakdown, critical path, TBT, CLS, render-blocking score',
+      'Raw diagnostic features: LCP breakdown, critical path, measured TBT when available, main-thread activity, CLS, render-blocking score',
     readOrder: 4,
   },
   {
@@ -152,7 +152,7 @@ const KNOWN_ARTIFACTS: ReadonlyArray<{
   {
     filename: 'runs-summary.json',
     description:
-      'Summary across multiple collection runs (only when --runs > 1)',
+      'Summary across multiple collection runs with per-metric variance (only when --runs > 1)',
     readOrder: 18,
   },
 ];

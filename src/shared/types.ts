@@ -50,6 +50,22 @@ export interface CollectorRunOptions {
   noRuntime: boolean;
   /** Device name for emulation (e.g. "iPhone 13", "Pixel 7"). Empty = desktop */
   mobile?: string;
+  /** Additional hostnames owned by the target organization. */
+  ownedDomains?: string[];
+}
+
+/** Environment and reproducibility context captured with each run. */
+export interface RunContext {
+  browser?: string;
+  os?: string;
+  device?: string;
+  viewport?: { width: number; height: number };
+  cacheState: 'cold' | 'warm' | 'unknown';
+  networkThrottling: string;
+  cpuThrottling: string;
+  headless: boolean;
+  runIndex?: number;
+  requestedRuns?: number;
 }
 
 /** Result of a single collection run */

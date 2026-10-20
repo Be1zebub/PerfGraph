@@ -45,6 +45,10 @@ const THIRD_PARTY_PATTERNS: Record<string, string> = {
   'vimeo': 'media',
 };
 
+const KNOWN_FIRST_PARTY_CDNS: Record<string, string[]> = {
+  'github.com': ['github.githubassets.com'],
+};
+
 /**
  * Extract the origin from a URL string.
  */
@@ -68,6 +72,17 @@ function categoriseHostname(hostname: string): string {
   return 'other';
 }
 
+function classifyOwnership(pageUrl: string, requestUrl: string, ownedDomains: string[] = []): 'first-party' | 'first-party-cdn' | 'third-party-vendor' | 'external-cdn' | 'unknown' {
+  const page = new URL(pageUrl);
+  const request = new URL(requestUrl);
+  if (request.origin === page.origin || request.hostname === page.hostname) return 'first-party';
+  if (KNOWN_FIRST_PARTY_CDNS[page.hostname]?.includes(request.hostname) || ownedDomains.includes(request.hostname)) return 'first-party-cdn';
+  const category = categoriseHostname(request.hostname);
+  if (category === 'cdn') return 'external-cdn';
+  if (category !== 'other') return 'third-party-vendor';
+  return 'unknown';
+}
+
 /**
  * Extract third-party overhead metrics from an IRBundle.
  *
@@ -81,6 +96,7 @@ export function extractThirdPartyOverhead(ir: IRBundle): ThirdPartyOverhead | un
   if (!pageOrigin) return undefined;
 
   const byCategory = new Map<string, { requests: number; bytes: number; duration: number }>();
+  const byOwnership = new Map<string, { requests: number; bytes: number; duration: number }>();
 
   let thirdPartyRequests = 0;
   let thirdPartyBytes = 0;
@@ -92,7 +108,14 @@ export function extractThirdPartyOverhead(ir: IRBundle): ThirdPartyOverhead | un
     const origin = getOrigin(req.url);
     if (!origin) continue;
 
-    if (origin === pageOrigin) {
+    const ownership = classifyOwnership(ir.meta.url, req.url, ir.meta.context?.ownedDomains);
+    const ownershipData = byOwnership.get(ownership) ?? { requests: 0, bytes: 0, duration: 0 };
+    ownershipData.requests++;
+    ownershipData.bytes += Math.max(0, req.bytes);
+    ownershipData.duration += Math.max(0, Number.isFinite(req.duration) ? req.duration : 0);
+    byOwnership.set(ownership, ownershipData);
+
+    if (ownership === 'first-party' || ownership === 'first-party-cdn') {
       firstPartyRequests++;
       firstPartyBytes += Math.max(0, req.bytes);
       continue;
@@ -124,6 +147,8 @@ export function extractThirdPartyOverhead(ir: IRBundle): ThirdPartyOverhead | un
   for (const [cat, data] of byCategory) {
     byCategoryObj[cat] = data;
   }
+  const byOwnershipObj: Record<string, { requests: number; bytes: number; duration: number }> = {};
+  for (const [category, data] of byOwnership) byOwnershipObj[category] = data;
 
   return {
     totalThirdPartyRequests: thirdPartyRequests,
@@ -133,5 +158,6 @@ export function extractThirdPartyOverhead(ir: IRBundle): ThirdPartyOverhead | un
     firstPartyRequests,
     thirdPartyRatio,
     byCategory: byCategoryObj,
+    byOwnership: byOwnershipObj,
   };
 }

@@ -30,7 +30,7 @@ import { getRemediation } from './remediations.js';
 // Constants
 // ---------------------------------------------------------------------------
 
-const REPORT_VERSION = '1.0.0';
+const REPORT_VERSION = '1.2.0';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -135,6 +135,66 @@ function buildChainId(ruleId: string, path: string[]): string {
   return `${ruleId}:${path.length}`;
 }
 
+function buildDataQuality(features?: FeatureSet): ReportSummary['dataQuality'] {
+  const warnings: string[] = [];
+
+  if (!features || Object.keys(features).length === 0) {
+    return {
+      status: 'partial',
+      warnings: ['No extracted performance features are available.'],
+    };
+  }
+
+  if (features.lcpBreakdown == null) {
+    warnings.push('LCP breakdown is unavailable.');
+  }
+  if (features.layoutShifts == null) {
+    warnings.push('Layout-shift data is unavailable.');
+  }
+  if (features.mainThreadBlocking == null) {
+    warnings.push('Main-thread data is unavailable.');
+  } else if (features.mainThreadBlocking.tbtMs == null) {
+    warnings.push('Measured TBT is unavailable; busyMs is not used as a TBT substitute.');
+  }
+  if (features.renderBlocking?.sourceConflict) {
+    warnings.push(`Network and Lighthouse render-blocking counts differ (${features.renderBlocking.networkResourceCount} vs ${features.renderBlocking.lighthouseResourceCount}); compare source-only resources before attributing impact.`);
+  }
+  const criticalPath = features.criticalPath;
+  if (criticalPath?.pageLifecycleMs != null && criticalPath.aggregateRequestDurationMs > criticalPath.pageLifecycleMs * 2) {
+    warnings.push('Aggregate request duration greatly exceeds page lifecycle; this is parallel work, not equivalent user wait time.');
+  }
+
+  return {
+    status: warnings.length > 0 ? 'partial' : 'complete',
+    warnings,
+  };
+}
+
+function isRecommendationApplicable(issue: ReportIssue, features?: FeatureSet): boolean {
+  if (!features) return false;
+
+  switch (issue.id) {
+    case 'rb-resources':
+      return (features.renderBlocking?.resources?.length ?? 0) > 0;
+    case 'high-main-thread-blocking':
+      return features.mainThreadBlocking?.tbtMs != null || features.jsHotspots != null;
+    case 'deep-critical-chain':
+      return features.criticalPath?.deepestChainDepth != null;
+    case 'excessive-requests':
+      return features.criticalPath?.requestCount != null;
+    case 'js-hotspots':
+    case 'many-scripts':
+    case 'long-tasks-js':
+      return features.jsHotspots != null;
+    case 'layout-shifts':
+    case 'high-cls':
+    case 'layout-shift-clusters':
+      return features.layoutShifts != null;
+    default:
+      return true;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main analyzer
 // ---------------------------------------------------------------------------
@@ -213,9 +273,24 @@ export function buildReport(
           label: n?.label ?? nodeId,
           type: n?.type ?? 'bottleneck',
           severity: n?.severity,
+          basis: n?.basis ?? 'inferred',
+          findingStatus: n?.findingStatus ?? (n?.evidence ? 'verified' : 'suspected'),
+          impactSurface: n?.impactSurface ?? 'unknown',
         };
       }),
       length: path.length,
+      relations: path.slice(0, -1).map((source, index) => {
+        const target = path[index + 1]!;
+        const edge = graph.edges.find((candidate) => candidate.source === source && candidate.target === target);
+        return {
+          source,
+          target,
+          confidence: edge?.confidence ?? 'weak',
+          basis: edge?.basis ?? (edge?.evidence ? 'observed' : 'inferred'),
+          findingStatus: edge?.findingStatus ?? (edge?.evidence ? 'verified' : 'suspected'),
+          evidence: edge?.evidence,
+        };
+      }),
     };
   });
 
@@ -256,12 +331,17 @@ export function buildReport(
       unit: node.unit,
       threshold: node.threshold,
       confidence,
+      basis: node.basis ?? (node.evidence ? 'observed' : 'inferred'),
+      findingStatus: node.findingStatus ?? (node.evidence ? 'verified' : 'suspected'),
+      impactSurface: node.impactSurface ?? 'unknown',
       remediation: getRemediation(node.id, {
         evidence: node.evidence,
         value: node.value,
         unit: node.unit,
         nodeType: node.type,
         ruleId,
+        lcpResourceType: features?.lcpBreakdown?.lcpResourceType
+          ?? features?.lcpBreakdown?.lcpElement?.nodeLabel,
       }),
       chainId: nodeToChain.get(node.id) ?? 'standalone',
       evidence: node.evidence,
@@ -306,6 +386,7 @@ export function buildReport(
     topIssues,
     lighthousePerformance,
     scoreExplanation,
+    dataQuality: buildDataQuality(features),
   };
 
   // -----------------------------------------------------------------------
@@ -317,7 +398,12 @@ export function buildReport(
 
   // Build recommendations from critical and warning issues
   const actionableIssues = issues.filter(
-    (i) => i.severity === 'critical' || i.severity === 'warning',
+    (i) =>
+      (i.severity === 'critical' || i.severity === 'warning') &&
+      // A derived impact/bottleneck without evidence is not an independent
+      // action. Recommendations should be anchored to an observed signal.
+      (i.type === 'metric' || i.evidence != null) &&
+      isRecommendationApplicable(i, features),
   );
 
   for (const issue of actionableIssues) {
@@ -342,12 +428,16 @@ export function buildReport(
       title: issue.label,
       description: issue.remediation,
       action,
-      expectedImpact: issue.type === 'impact'
-        ? 'Target metric improvement'
-        : 'Eliminates bottleneck in the degradation chain',
+      expectedImpact: 'Potential improvement; verify with a repeat run',
+      expectedImpactStatus: 'unknown',
       relatedIssues: issues
         .filter((other) => other.chainId === issue.chainId && other.id !== issue.id)
         .map((other) => other.id),
+      applicability: 'applicable',
+      evidence: issue.evidence?.urls ?? (issue.evidence?.metric ? [
+        `${issue.evidence.metric.name}: ${issue.evidence.metric.value}${issue.evidence.metric.unit}`,
+      ] : undefined),
+      verification: 'Repeat the same analysis after the change and compare the cited metric and evidence.',
     });
   }
 
@@ -369,6 +459,7 @@ export function buildReport(
     graphNodeCount: graph.metadata.totalNodes,
     graphEdgeCount: graph.metadata.totalEdges,
     ruleCount: graph.metadata.ruleCount,
+    runContext: features?.runContext,
   };
 
   // -----------------------------------------------------------------------

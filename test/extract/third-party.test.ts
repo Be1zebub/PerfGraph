@@ -73,6 +73,22 @@ describe('extractThirdPartyOverhead', () => {
     expect(result!.thirdPartyRatio).toBe(0);
   });
 
+  it('recognizes the known GitHub asset CDN as first-party CDN ownership', () => {
+    const ir = makeIRBundle({
+      meta: { url: 'https://github.com', fetchedAt: '2025-01-01T00:00:00Z', navigationStart: 0, irVersion: '1.0.0' },
+      network: {
+        requests: [
+          { url: 'https://github.com/', method: 'GET', resourceType: 'Document', statusCode: 200, startTime: 0, endTime: 100, duration: 100, bytes: 1, priority: 'VeryHigh', initiator: '', failed: false, timing: {} },
+          { url: 'https://github.githubassets.com/assets/app.js', method: 'GET', resourceType: 'Script', statusCode: 200, startTime: 1, endTime: 101, duration: 100, bytes: 2, priority: 'High', initiator: '', failed: false, timing: {} },
+        ],
+        summary: { totalRequests: 2, totalBytes: 3, byType: {}, byPriority: {}, criticalPath: { tree: { url: '' }, depth: 0, urlsOnLongestPath: [] }, longestChain: { url: '', length: 0 } },
+      },
+    });
+    const result = extractThirdPartyOverhead(ir)!;
+    expect(result.totalThirdPartyRequests).toBe(0);
+    expect(result.byOwnership['first-party-cdn'].requests).toBe(1);
+  });
+
   it('handles all third-party requests', () => {
     const ir = makeIRBundle({
       network: {
