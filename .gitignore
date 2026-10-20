@@ -3,10 +3,12 @@
 
 # Git
 !.gitignore
+!.gitattributes
 
 # npm package contents (what gets published)
 !dist/
 !README.md
+!CHANGELOG.md
 !LICENSE
 
 # Source & config (needed to build/test)

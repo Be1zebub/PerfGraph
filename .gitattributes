@@ -1,0 +1,11 @@
+# Normalize line endings in the repository, keep the working tree readable.
+* text=auto
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff2 binary
+*.woff binary
