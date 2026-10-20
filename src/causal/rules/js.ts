@@ -49,7 +49,12 @@ export const tbtInpChain = {
 
   applies(features: FeatureSet): boolean {
     const mt = features.mainThreadBlocking;
-    return mt != null && mt.blockingScore > 0.3;
+    if (mt == null) return false;
+    // A measured TBT above the threshold is enough on its own. Requiring the
+    // busy ratio as well meant a page with 1.8 s of blocking never produced
+    // this chain, and its strongest signal was missing from the report.
+    if (mt.tbtMs != null && mt.tbtMs > TBT_WARN) return true;
+    return mt.blockingScore > 0.3;
   },
 
   build(features: FeatureSet): { nodes: CausalNode[]; edges: CausalEdge[] } {

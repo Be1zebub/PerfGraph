@@ -83,6 +83,27 @@ function baseFeatures(overrides?: Partial<FeatureSet>): FeatureSet {
 // ---------------------------------------------------------------------------
 
 describe('buildCausalGraph', () => {
+  it('builds the TBT chain from a measured TBT even when the busy ratio is low', () => {
+    const features = baseFeatures({
+      mainThreadBlocking: {
+        blockingScore: 0.05,
+        busyMs: 120,
+        idleMs: 900,
+        blockingRatio: 0.05,
+        tbtMs: 1865,
+        tbtStatus: 'measured',
+        busyStatus: 'measured',
+        categories: { scripting: 60, layout: 20, other: 20 },
+      },
+    });
+    const graph = buildCausalGraph(features);
+
+    const tbtNode = graph.nodes.find((n) => n.id === 'high-tbt');
+    expect(tbtNode).toBeDefined();
+    expect(tbtNode!.value).toBe(1865);
+    expect(tbtNode!.severity).toBe('critical');
+  });
+
   it('returns a valid CausalGraph from a full FeatureSet with no issues', () => {
     const features = baseFeatures();
     const graph = buildCausalGraph(features);
