@@ -217,11 +217,19 @@ async function runOnce(
 
       // --- Phase 4: Navigate to target URL ---
       console.error(`[${runIndex}] Navigating to ${url}...`);
-      await page.goto(url, { waitUntil: 'networkidle', timeout: 60_000 });
+      // Wait for the load event, not for the network to fall silent. A page
+      // that keeps polling — a chat, a dashboard, a page with an analytics
+      // beacon — never goes network-idle, and waiting for it only turns a
+      // slow page into a failed run.
+      await page.goto(url, { waitUntil: 'load', timeout: 60_000 });
+
+      // Give the network a moment to settle, but do not fail when it does
+      // not: the LCP wait below is what decides when the page is ready.
+      await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
 
       // --- Phase 4b: Wait for LCP before stopping collectors ---
       // This ensures the trace (and other collectors) capture the LargestContentfulPaint
-      // event, which may fire after networkidle (e.g. large hero images, late fonts).
+      // event, which may fire after the load event (e.g. large hero images, late fonts).
       console.error(`[${runIndex}] Waiting for LargestContentfulPaint...`);
       const lcpEntry = await waitForLCP(page, LCP_TIMEOUT_MS);
       if (lcpEntry) {

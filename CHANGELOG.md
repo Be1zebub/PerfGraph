@@ -63,6 +63,8 @@ the only runtime interface, and the agent-facing layer is a skill.
   belong to the same organisation, such as gstatic.com for a Google site
 - a URL without a scheme is accepted, and a failed run prints its message
   instead of a stack trace
+- a page that never goes network-idle can be measured: the run waits for the
+  load event and for the LCP, not for the network to fall silent
 - the insights and the report give the same recommendations
 
 ## 0.1.2

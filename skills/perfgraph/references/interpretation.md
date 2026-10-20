@@ -123,6 +123,14 @@ When the sum of the parts is much smaller than the time the visitor waited,
 the difference is the time before the request started. Say so instead of
 blaming the server.
 
+## Pages that never settle
+
+A page that keeps polling — a chat, a dashboard, a beacon — never goes
+network-idle. The run waits for the load event and for the LCP, so it
+completes, but the numbers describe the state at the first paint, not a
+settled page. Say so when the page keeps requesting, and do not read a long
+`aggregateRequestDurationMs` as waiting time.
+
 ## Document chain
 
 `insights.criticalPath.documentChain` appears when the browser loaded more
