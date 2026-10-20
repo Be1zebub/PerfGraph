@@ -52,8 +52,9 @@ read artifacts in this order:
 4. `report.md` — human-readable fallback when it makes the chain easier to scan;
 5. `graph.toon`, `network-summary.toon`, `lighthouse-summary.toon`, and
    `coverage-summary.toon` only for a targeted deep dive;
-6. `trace.json`, `network.json`, `lighthouse.json`, and other raw files only
-   when the compact artifacts lack the evidence needed for the question.
+6. `lcp.json` for the raw LCP entry, `context.json` for the run environment,
+   and `trace.json`, `network.json`, `lighthouse.json` only when the compact
+   artifacts lack the evidence needed for the question.
 
 `insights.toon` carries two metric blocks. `metrics` holds the values measured
 in the PerfGraph run (the run described by `runContext`); `lighthouse` holds
