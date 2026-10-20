@@ -399,7 +399,20 @@ export async function run(
         if (values.length === 0) return null;
         const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
         const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length;
-        return { samples: values.length, min: Math.min(...values), max: Math.max(...values), mean, standardDeviation: Math.sqrt(variance) };
+        const sorted = [...values].sort((a, b) => a - b);
+        const middle = Math.floor(sorted.length / 2);
+        const median =
+          sorted.length % 2 === 0
+            ? ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2
+            : (sorted[middle] ?? 0);
+        return {
+          samples: values.length,
+          min: Math.min(...values),
+          max: Math.max(...values),
+          mean,
+          median,
+          standardDeviation: Math.sqrt(variance),
+        };
       };
       const summary = {
         url,
