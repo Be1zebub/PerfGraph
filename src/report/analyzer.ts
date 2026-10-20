@@ -367,9 +367,16 @@ export function buildReport(
 
   // Top 5 issues (sorted by severity, then by confidence: strong > medium > weak)
   const confOrder: Record<string, number> = { strong: 0, medium: 1, weak: 2 };
+  // The impact node of a chain restates its cause, so it is listed after the
+  // measurement it belongs to. Otherwise the list of the top findings shows
+  // the same problem twice.
+  const typeOrder: Record<string, number> = { metric: 0, bottleneck: 1, impact: 2 };
   const sortedTop = [...issues].sort((a, b) => {
     const sevCmp = (sevOrder[a.severity] ?? 3) - (sevOrder[b.severity] ?? 3);
     if (sevCmp !== 0) return sevCmp;
+    const typeCmp =
+      (typeOrder[a.type ?? 'metric'] ?? 3) - (typeOrder[b.type ?? 'metric'] ?? 3);
+    if (typeCmp !== 0) return typeCmp;
     return (confOrder[a.confidence] ?? 3) - (confOrder[b.confidence] ?? 3);
   });
 
