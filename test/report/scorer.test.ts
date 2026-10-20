@@ -91,15 +91,15 @@ function impactNode(
 
 describe('computeScore (backward compat — no lighthouse data)', () => {
   it('returns "good" for empty graph', () => {
-    expect(computeScore(emptyGraph())).toBe('good');
+    expect(computeScore(emptyGraph()).score).toBe('good');
   });
 
   it('returns "poor" when critical nodes exist', () => {
-    expect(computeScore(graphWithCriticals(1))).toBe('poor');
+    expect(computeScore(graphWithCriticals(1)).score).toBe('poor');
   });
 
   it('returns "moderate" when only warnings exist', () => {
-    expect(computeScore(graphWithWarnings(1))).toBe('moderate');
+    expect(computeScore(graphWithWarnings(1)).score).toBe('moderate');
   });
 
   it('does not downgrade for borderline TTFB alone', () => {
@@ -116,7 +116,7 @@ describe('computeScore (backward compat — no lighthouse data)', () => {
       metadata: { totalRules: 1, firedRules: 1 },
     };
 
-    expect(computeScore(graph)).toBe('good');
+    expect(computeScore(graph).score).toBe('good');
   });
 
   it('returns "good" when only info nodes exist', () => {
@@ -132,7 +132,7 @@ describe('computeScore (backward compat — no lighthouse data)', () => {
       edges: [],
       metadata: { totalRules: 1, firedRules: 0 },
     };
-    expect(computeScore(graph)).toBe('good');
+    expect(computeScore(graph).score).toBe('good');
   });
 });
 
@@ -167,7 +167,7 @@ describe('computeScore with lighthouse data', () => {
     // 2 criticals + lighthouse 0.75 → rule #4 fails (criticalCount <= 1)
     const result = computeScore(graphWithCriticals(2), 0.75);
     // Falls through to fallback: criticalCount > 0 → 'poor'
-    expect(result).toBe('poor');
+    expect(result.score).toBe('poor');
   });
 
   it('returns "poor" when lighthouse >= 0.7 but has genuine LCP regression', () => {
@@ -177,7 +177,7 @@ describe('computeScore with lighthouse data', () => {
       unit: 'ms',
     });
     const result = computeScore(graph, 0.91);
-    expect(result).toBe('poor');
+    expect(result.score).toBe('poor');
   });
 
   it('returns "poor" when lighthouse >= 0.7 but has genuine TTFB regression', () => {
@@ -187,19 +187,19 @@ describe('computeScore with lighthouse data', () => {
       unit: 'ms',
     });
     const result = computeScore(graph, 0.91);
-    expect(result).toBe('poor');
+    expect(result.score).toBe('poor');
   });
 
   it('returns "poor" when lighthouse is low (< 0.7)', () => {
     const graph = graphWithCriticals(1);
     const result = computeScore(graph, 0.5);
-    expect(result).toBe('poor');
+    expect(result.score).toBe('poor');
   });
 
   it('returns "poor" when lighthouse is moderate (0.75) but has 2+ criticals', () => {
     const graph = graphWithCriticals(2);
     const result = computeScore(graph, 0.75);
-    expect(result).toBe('poor');
+    expect(result.score).toBe('poor');
   });
 });
 
@@ -212,7 +212,7 @@ describe('computeScore genuine regression detection', () => {
     };
     const result = computeScore(graph, 0.94);
     // lighthouse >= 0.9 but genuine regression → fallback → 'poor'
-    expect(result).toBe('poor');
+    expect(result.score).toBe('poor');
   });
 
   it('detects TTFB > 2500ms as genuine regression', () => {
@@ -222,7 +222,7 @@ describe('computeScore genuine regression detection', () => {
       metadata: { totalRules: 1, firedRules: 1 },
     };
     const result = computeScore(graph, 0.91);
-    expect(result).toBe('poor');
+    expect(result.score).toBe('poor');
   });
 
   it('does not treat low request count as genuine regression', () => {
@@ -246,6 +246,6 @@ describe('computeScore genuine regression detection', () => {
       metadata: { totalRules: 1, firedRules: 1 },
     };
     const result = computeScore(graph, 0.94);
-    expect(result).toBe('poor');
+    expect(result.score).toBe('poor');
   });
 });

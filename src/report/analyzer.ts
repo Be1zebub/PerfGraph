@@ -375,8 +375,8 @@ export function buildReport(
   const warningCount = issues.filter((i) => i.severity === 'warning').length;
   const infoCount = issues.filter((i) => i.severity === 'info').length;
   const scoreResult = computeScore(graph, lighthousePerformance);
-  const score = typeof scoreResult === 'string' ? scoreResult : scoreResult.score;
-  const scoreExplanation = typeof scoreResult === 'object' ? scoreResult.explanation : undefined;
+  const score = scoreResult.score;
+  const scoreExplanation = scoreResult.explanation;
 
   // Top 5 issues (sorted by severity, then by confidence: strong > medium > weak)
   const confOrder: Record<string, number> = { strong: 0, medium: 1, weak: 2 };

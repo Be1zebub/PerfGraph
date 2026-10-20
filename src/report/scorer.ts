@@ -61,18 +61,12 @@ function isActionableWarning(node: CausalNode): boolean {
  *
  * @param graph - The causal graph to evaluate
  * @param lighthousePerformance - Optional Lighthouse performance score (0–1)
- * @returns A string score when called without lighthouse data; otherwise
- *          either a string or an object with `score` and optional `explanation`.
+ * @returns The score and a short explanation of how it was reached
  */
-export function computeScore(graph: CausalGraph): ReportScore;
 export function computeScore(
   graph: CausalGraph,
   lighthousePerformance?: number,
-): ReportScore | { score: ReportScore; explanation?: string };
-export function computeScore(
-  graph: CausalGraph,
-  lighthousePerformance?: number,
-): ReportScore | { score: ReportScore; explanation?: string } {
+): { score: ReportScore; explanation?: string } {
   let criticalCount = 0;
 
   for (const node of graph.nodes) {
@@ -103,9 +97,20 @@ export function computeScore(
   }
 
   // Fallback heuristic: ignore borderline TTFB-only observations.
-  if (criticalCount > 0) return 'poor';
-  if (graph.nodes.some((node) => node.severity === 'warning' && isActionableWarning(node))) {
-    return 'moderate';
+  if (criticalCount > 0) {
+    return {
+      score: 'poor',
+      explanation: `${criticalCount} critical finding(s) in the causal graph`,
+    };
   }
-  return 'good';
+  if (graph.nodes.some((node) => node.severity === 'warning' && isActionableWarning(node))) {
+    return {
+      score: 'moderate',
+      explanation: 'Actionable warnings in the causal graph, no critical findings',
+    };
+  }
+  return {
+    score: 'good',
+    explanation: 'No critical or actionable findings in the causal graph',
+  };
 }

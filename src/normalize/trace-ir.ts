@@ -276,27 +276,21 @@ function buildTraceSummary(
     categories[topCat] = (categories[topCat] ?? 0) + 1;
   }
 
-  // Group by thread ID, sum durations
-  const threadDurations = new Map<number, number>();
+  // Identify the main thread: the one with the most events. A thread id is
+  // only unique inside a process, so the process has to be part of the key:
+  // events of two processes that happen to share a thread id would otherwise
+  // be summed into one thread, reporting more busy time than the page took.
+  const threadCounts = new Map<string, number>();
   for (const ev of events) {
-    if (isNumber(ev.dur)) {
-      const tid = ev.tid;
-      const currentDur = threadDurations.get(tid) ?? 0;
-      threadDurations.set(tid, currentDur + ev.dur);
-    }
+    const key = `${ev.pid}:${ev.tid}`;
+    threadCounts.set(key, (threadCounts.get(key) ?? 0) + 1);
   }
 
-  // Identify main thread: the one with the most events
-  const threadCounts = new Map<number, number>();
-  for (const ev of events) {
-    threadCounts.set(ev.tid, (threadCounts.get(ev.tid) ?? 0) + 1);
-  }
-
-  let mainTid = 0;
+  let mainThreadKey = '';
   let maxCount = 0;
-  for (const [tid, count] of threadCounts) {
+  for (const [key, count] of threadCounts) {
     if (count > maxCount) {
-      mainTid = tid;
+      mainThreadKey = key;
       maxCount = count;
     }
   }
@@ -305,7 +299,7 @@ function buildTraceSummary(
   const byCategory: Record<string, number> = {};
   let mainThreadTotalMs = 0;
   for (const ev of events) {
-    if (ev.tid !== mainTid || !isNumber(ev.dur)) continue;
+    if (`${ev.pid}:${ev.tid}` !== mainThreadKey || !isNumber(ev.dur)) continue;
 
     let durUs = ev.dur;
     if (windowEndMs !== undefined) {
