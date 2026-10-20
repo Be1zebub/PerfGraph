@@ -7,7 +7,7 @@
  */
 
 import { z } from 'zod';
-import { RunContextSchema } from '../normalize/types.js';
+import { RunContextSchema, LighthouseFindingSchema } from '../normalize/types.js';
 
 // ---------------------------------------------------------------------------
 // LCP Breakdown (FEA-01)
@@ -257,6 +257,8 @@ export const FeatureSetSchema = z.strictObject({
   layoutShifts: LayoutShiftsSchema.optional(),
   thirdPartyOverhead: ThirdPartyOverheadSchema.optional(),
   renderBlocking: RenderBlockingScoreSchema.optional(),
+  /** Findings measured by the Lighthouse insight audits */
+  lighthouseFindings: z.array(LighthouseFindingSchema).optional(),
 });
 
 export type LCPBreakdown = z.infer<typeof LCPBreakdownSchema>;

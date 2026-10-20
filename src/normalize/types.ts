@@ -91,6 +91,33 @@ export const LCPEntrySchema = z.object({
 export type LCPEntry = z.infer<typeof LCPEntrySchema>;
 
 /**
+ * A finding measured by a Lighthouse insight audit.
+ *
+ * These are the costs the causal rules cannot derive from a trace: forced
+ * reflows, images that could be smaller, bytes that could be cached. Each
+ * one carries the value Lighthouse measured and the sources involved.
+ */
+export const LighthouseFindingSchema = z.object({
+  /** The Lighthouse audit the finding comes from */
+  id: z.string(),
+  /** Human-readable name of the finding */
+  title: z.string(),
+  /** The measured cost */
+  value: z.number(),
+  /** Unit of the measured cost */
+  unit: z.enum(['ms', 'bytes', 'count', 'score']),
+  /** The sources involved — script URLs, image URLs, element paths */
+  sources: z.array(z.string()).optional(),
+  /** The audit's own score: 0 is the worst, 1 the best */
+  auditScore: z.number().optional(),
+  /** Value above which the finding is worth reporting */
+  warnAt: z.number(),
+  /** Value above which the finding is severe */
+  critAt: z.number(),
+});
+export type LighthouseFinding = z.infer<typeof LighthouseFindingSchema>;
+
+/**
  * The largest contentful paint candidate reported by the trace.
  *
  * Chrome emits one `largestContentfulPaint::Candidate` event per candidate
@@ -305,6 +332,8 @@ export const RenderBlockingInsightSchema = z.object({
 
 export const LighthouseIRSchema = z.object({
   categories: z.record(z.string(), LighthouseCategorySchema),
+  /** Findings measured by the Lighthouse insight audits */
+  insights: z.array(LighthouseFindingSchema).optional(),
   failedAudits: z.array(LighthouseFailedAuditSchema),
   scores: LighthouseScoresSchema,
   /** Lighthouse LCP numeric value in ms (fallback when trace lacks LCP) */

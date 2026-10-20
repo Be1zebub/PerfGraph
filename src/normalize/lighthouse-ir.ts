@@ -14,6 +14,7 @@ import type {
   LighthouseFailedAudit,
   LighthouseScores,
 } from './types.js';
+import { parseInsightFindings } from './lighthouse-findings.js';
 
 // ---------------------------------------------------------------------------
 // Types for internal LHR shape
@@ -146,8 +147,7 @@ export function buildLighthouseIR(
 
   // 3. Extract failed audits (score < 1)
   const failedAudits: LighthouseFailedAudit[] = [];
-  const rawAudits = lhr.audits ?? {};
-  for (const [, audit] of Object.entries(rawAudits)) {
+  const rawAudits = lhr.audits ?? {};  for (const [, audit] of Object.entries(rawAudits)) {
     if (!audit) continue;
     const score = audit.score;
     // Include audits with score < 1 (including null → treated as 0)
@@ -200,6 +200,7 @@ export function buildLighthouseIR(
     categories,
     failedAudits,
     scores,
+    insights: parseInsightFindings(rawAudits as Record<string, unknown>),
     lcpNumericValue: lcpNumericValue !== undefined ? lcpNumericValue : undefined,
     lcpElementSelector: lcpElement?.selector,
     lcpElementSnippet: lcpElement?.snippet,

@@ -33,5 +33,6 @@ export function extract(ir: IRBundle): FeatureSet {
     layoutShifts: extractLayoutShifts(ir),
     thirdPartyOverhead: extractThirdPartyOverhead(ir),
     renderBlocking: extractRenderBlocking(ir),
+    lighthouseFindings: ir.lighthouse.insights?.length ? ir.lighthouse.insights : undefined,
   };
 }

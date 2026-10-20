@@ -60,6 +60,27 @@ Limitations: <warnings, missing collectors, confidence caveats>.
   how much — that is two measurements under different conditions, not a
   contradiction.
 
+## Lighthouse findings
+
+`insights.lighthouse.failedAudits` lists the Lighthouse audits that did not
+pass, with their values. Some of them are findings the causal rules cannot
+derive, and they reach the report as issues with the value Lighthouse
+measured:
+
+- `forced-reflow` — a script read a layout property after changing the DOM,
+  so the browser had to lay out again. The sources name the script and the
+  position.
+- `image-delivery` — bytes that could be saved by serving smaller images.
+- `cache` — bytes fetched again on every visit because the response is not
+  cacheable.
+- `duplicated-javascript` and `legacy-javascript` — bytes delivered twice or
+  shipped in a form the browser has to transform.
+- `font-display` — time the text was blocked by a font.
+- `cls-culprits` — the elements that caused the layout shifts.
+
+These come from Lighthouse's own run, not from the traced run. Say so when
+you quote them, and do not present them as measurements of the lab run.
+
 ## Document response headers
 
 `insights.documentResponse` carries the headers of the document the visitor

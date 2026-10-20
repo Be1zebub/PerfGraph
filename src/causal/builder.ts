@@ -19,6 +19,7 @@ import { lcpRules } from './rules/lcp.js';
 import { networkRules } from './rules/network.js';
 import { jsRules } from './rules/js.js';
 import { layoutRules } from './rules/layout.js';
+import { lighthouseFindingsChain } from './rules/lighthouse.js';
 
 // ---------------------------------------------------------------------------
 // CausalRule interface
@@ -41,11 +42,15 @@ export interface CausalRule {
 
 // IMPORTANT: order matters — rules evaluated first get priority for
 // node/edge IDs if there are overlaps (unlikely, but possible).
+/** The rules of the Lighthouse findings */
+const lighthouseRules = [lighthouseFindingsChain];
+
 const ALL_RULES: CausalRule[] = [
   ...lcpRules,
   ...networkRules,
   ...jsRules,
   ...layoutRules,
+  ...lighthouseRules,
 ];
 
 // ---------------------------------------------------------------------------

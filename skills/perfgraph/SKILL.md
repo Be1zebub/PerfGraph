@@ -154,5 +154,7 @@ problem, not a slow backend. Do not fetch the page again with curl to learn
 these.
 
 `insights.lighthouse.failedAudits` lists the Lighthouse audits that did not
-pass, with their values — they carry findings the causal rules cannot derive,
-such as forced reflows or main-thread work.
+pass, with their values. Some of them reach the report as findings with the
+value Lighthouse measured — forced reflows, oversized images, bytes that are
+not cached, duplicated or legacy JavaScript, fonts that block the text. They
+come from Lighthouse's own run, so name that source when you quote them.

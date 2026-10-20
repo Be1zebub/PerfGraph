@@ -83,6 +83,50 @@ function baseFeatures(overrides?: Partial<FeatureSet>): FeatureSet {
 // ---------------------------------------------------------------------------
 
 describe('buildCausalGraph', () => {
+  it('builds a chain for a Lighthouse finding', () => {
+    const features = baseFeatures({
+      lighthouseFindings: [
+        {
+          id: 'forced-reflow',
+          title: 'Forced reflow',
+          value: 197,
+          unit: 'ms',
+          sources: ['https://example.com/app.js:1:4220'],
+          auditScore: 0,
+          warnAt: 50,
+          critAt: 200,
+        },
+      ],
+    });
+    const graph = buildCausalGraph(features);
+
+    const node = graph.nodes.find((n) => n.id === 'lh-forced-reflow');
+    expect(node).toBeDefined();
+    expect(node!.value).toBe(197);
+    expect(node!.severity).toBe('warning');
+    expect(node!.basis).toBe('observed');
+    expect(node!.evidence?.metric?.source).toBe('lighthouse');
+    expect(node!.evidence?.urls).toEqual(['https://example.com/app.js:1:4220']);
+  });
+
+  it('leaves out a Lighthouse finding below its threshold', () => {
+    const features = baseFeatures({
+      lighthouseFindings: [
+        {
+          id: 'cache',
+          title: 'Static resources are not cached',
+          value: 1_000,
+          unit: 'bytes',
+          warnAt: 20_000,
+          critAt: 100_000,
+        },
+      ],
+    });
+    const graph = buildCausalGraph(features);
+
+    expect(graph.nodes.find((n) => n.id === 'lh-cache')).toBeUndefined();
+  });
+
   it('builds a chain for a document that was discarded', () => {
     const features = baseFeatures({
       criticalPath: {
@@ -146,7 +190,7 @@ describe('buildCausalGraph', () => {
     expect(graph.metadata.hasCycle).toBe(false);
 
     // Metadata has correct rule count
-    expect(graph.metadata.ruleCount).toBe(11); // 3 LCP + 3 network + 3 JS + 2 layout
+    expect(graph.metadata.ruleCount).toBe(12); // 3 LCP + 3 network + 3 JS + 2 layout + 1 Lighthouse
     expect(graph.metadata.totalNodes).toBeGreaterThanOrEqual(0);
     expect(graph.metadata.totalEdges).toBeGreaterThanOrEqual(0);
   });

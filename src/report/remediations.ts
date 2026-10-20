@@ -92,6 +92,42 @@ const REMEDIATIONS: Record<RemediationKey, string> = {
   'excessive-requests':
     'Reduce the number of requests on the critical path: bundle files, use ' +
     'sprites/SVG, HTTP/2 multiplexing, tree shaking, code splitting.',
+  'lh-forced-reflow':
+    'A forced reflow means the script reads a layout property after changing ' +
+    'the DOM, so the browser has to lay out again. Batch the DOM changes and ' +
+    'read the layout once at the end.',
+  'lh-image-delivery':
+    'The images are larger than they need to be. Serve modern formats, size ' +
+    'them to the rendered dimensions, and keep them off the critical path.',
+  'lh-cache':
+    'The static resources are fetched again on every visit. Give them a ' +
+    'long-lived Cache-Control, and let the CDN serve them.',
+  'lh-duplicated-javascript':
+    'The same JavaScript is delivered more than once. Bundle the modules ' +
+    'that are loaded by several routes into one.',
+  'lh-legacy-javascript':
+    'The bundle still contains legacy JavaScript that has to be transpiled ' +
+    'and polyfilled. Target modern browsers and drop the transforms.',
+  'lh-font-display':
+    'The fonts block the text while they load. Use font-display: swap or ' +
+    'optional, and preload the font that is used above the fold.',
+  'lh-cls-culprits':
+    'Give the elements that move explicit dimensions, so their space is ' +
+    'reserved before the content arrives.',
+  'lh-impact-forced-reflow':
+    'The forced reflow is avoidable work on the page.',
+  'lh-impact-image-delivery':
+    'The oversized images are avoidable work on the page.',
+  'lh-impact-cache':
+    'The uncached resources are avoidable work on the page.',
+  'lh-impact-duplicated-javascript':
+    'The duplicated JavaScript is avoidable work on the page.',
+  'lh-impact-legacy-javascript':
+    'The legacy JavaScript is avoidable work on the page.',
+  'lh-impact-font-display':
+    'The font loading is avoidable work on the page.',
+  'lh-impact-cls-culprits':
+    'The layout shifts are avoidable work on the page.',
   'bandwidth-contention':
     'Reduce bandwidth contention: prioritise critical resources (preload), ' +
     'defer non-critical ones (lazy load, async/defer), use HTTP/2.',
