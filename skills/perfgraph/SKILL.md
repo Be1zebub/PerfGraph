@@ -30,7 +30,9 @@ packages as an implicit fallback. A missing Chromium binary is an environment
 setup failure, not a performance finding.
 
 Give the shell command enough time for browser startup, navigation, collection,
-and Lighthouse. If it exits non-zero, inspect stderr and do not produce a
+and Lighthouse. A full run takes about three minutes — a Lighthouse audit runs
+in the same browser, so a shorter timeout kills the run before it produces
+anything. If it exits non-zero, inspect stderr and do not produce a
 performance verdict.
 
 ## Read results progressively
