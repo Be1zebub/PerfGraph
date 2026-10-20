@@ -129,7 +129,7 @@ function enabledCollectors(defs: CollectorDef[], options: CollectorRunOptions): 
  * If LCP doesn't fire within this window, a warning is recorded but collection
  * proceeds with whatever data was captured.
  */
-const LCP_TIMEOUT_MS = 5_000;
+const LCP_TIMEOUT_MS = 10_000;
 
 /**
  * Wait for LargestContentfulPaint to settle and return the final entry.
