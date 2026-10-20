@@ -72,7 +72,9 @@ function isInlineUrl(url: string): boolean {
 function classifyElement(text: string): LcpElementKind {
   const value = text.toLowerCase();
   if (!value) return 'unknown';
-  if (/(<|\b)(img|image|svg|video|picture|source)\b/.test(value)) return 'image';
+  // `source` and `image` are left out on purpose: they occur in class names
+  // and file names far more often than in an element name.
+  if (/(<|\b)(img|svg|video|picture)\b/.test(value)) return 'image';
   if (/(<|\b)(p|h1|h2|h3|h4|h5|h6|span|ul|ol|li|blockquote|em|strong)\b/.test(value)) {
     return 'text';
   }
