@@ -14,7 +14,6 @@
  *   perfgraph analyze <features-file> [--output <file>] [--pretty]
  *   perfgraph report <features-file> [--output <file>] [--pretty]
  *   perfgraph run --url <url> [--output <dir>] [--runs <n>] [--pretty]
- *   perfgraph mcp                              (MCP stdio server for AI agents)
  *   perfgraph --help
  */
 
@@ -31,7 +30,6 @@ USAGE
   perfgraph analyze <features-file> [--output <file>] [--pretty]
   perfgraph report <features-file> [--output <file>] [--pretty]
   perfgraph run --url <url> [options]             (full pipeline in one command)
-  perfgraph mcp                                   (MCP stdio server for AI agents)
 
 COMMANDS
   collect    Collect performance data from a URL
@@ -40,7 +38,6 @@ COMMANDS
   analyze    Build causal degradation graph from features
   report     Generate comprehensive JSON report for AI consumption
   run        Full pipeline: collect -> normalize -> extract -> analyze -> report
-  mcp        Start MCP stdio server for AI agent integration
 
 COLLECT OPTIONS
   --url <url>           Target URL to analyze (required)
@@ -92,9 +89,6 @@ RUN OPTIONS
   --no-dom              Skip DOM snapshot collection
   --help, -h            Show this help message
 
-MCP OPTIONS
-  No flags required. Starts an MCP stdio server.
-
 EXAMPLES
   perfgraph collect --url https://example.com
   perfgraph collect --url https://example.com --output ./results
@@ -109,7 +103,6 @@ EXAMPLES
   perfgraph report ./features.toon --output report.toon --pretty
   perfgraph run --url https://example.com --pretty          (full pipeline)
   perfgraph run --url https://example.com --pretty --runs 3
-  perfgraph mcp                                            (MCP server)
 `);
 }
 
@@ -121,7 +114,7 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  if ((args.includes('--help') || args.includes('-h')) && subcommand !== 'normalize' && subcommand !== 'run' && subcommand !== 'mcp') {
+  if ((args.includes('--help') || args.includes('-h')) && subcommand !== 'normalize' && subcommand !== 'run') {
     printHelp();
     process.exit(0);
   }
@@ -168,15 +161,6 @@ async function main(): Promise<void> {
       const { runRunFromArgs } = await import('./cli/run.js');
       const result = await runRunFromArgs(args.slice(1));
       if (!result) {
-        process.exit(1);
-      }
-      break;
-    }
-
-    case 'mcp': {
-      const { runMcpFromArgs } = await import('./cli/mcp.js');
-      const ok = await runMcpFromArgs(args.slice(1));
-      if (!ok) {
         process.exit(1);
       }
       break;
