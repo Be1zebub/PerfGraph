@@ -29,9 +29,13 @@ the only runtime interface, and the agent-facing layer is a skill.
   visitor received — cache status, cache-control, content encoding, alt-svc.
 - `insights.lighthouse.failedAudits` lists the Lighthouse audits that did not
   pass, with their values.
+- the CLI prints a short summary for the person who ran it: score, issue
+  counts, data-quality warnings and where the report is.
 
 ### Fixed
 
+- a run against a site that serves a request initiated by itself — Google does
+  — no longer dies with a stack overflow while building the critical path
 - the LCP element is the one the browser reported, taken from the final
   Performance API candidate, instead of the largest downloaded image
 - the trace LCP was never parsed: the event name did not match the one Chrome
@@ -41,6 +45,9 @@ the only runtime interface, and the agent-facing layer is a skill.
 - main-thread work is counted per process and only for the outermost events,
   and Total Blocking Time counts the main thread only
 - the run environment and the collection warnings reach the report
+- the report and the insights judge the quality of the data the same way
+- a URL without a scheme is accepted, and a failed run prints its message
+  instead of a stack trace
 - the insights and the report give the same recommendations
 
 ## 0.1.2
