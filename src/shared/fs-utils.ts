@@ -8,6 +8,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { CoverageRawData, RawDataBundle } from '../collect/types.js';
+import type { LcpEntry } from '../collect/lcp.js';
+import type { RunContext } from './types.js';
 
 /** Read a JSON file, returning parsed content or undefined if missing. */
 export function readJson(dir: string, filename: string): unknown | undefined {
@@ -40,6 +42,8 @@ export function loadRunDir(runDir: string): RawDataBundle {
     dom: readJson(dir, 'dom.json'),
     lighthouse: readJson(dir, 'lighthouse.json'),
     coverage: readJson(dir, 'coverage.json') as CoverageRawData | undefined,
+    context: readJson(dir, 'context.json') as RunContext | undefined,
+    lcp: readJson(dir, 'lcp.json') as LcpEntry | undefined,
     warnings:
       warningsRaw &&
       typeof warningsRaw === 'object' &&

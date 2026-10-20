@@ -47,6 +47,42 @@ export const CoreWebVitalsSchema = z.object({
   inp: z.number().optional(),
 });
 
+/**
+ * The largest contentful paint entry reported by the Performance API.
+ *
+ * Unlike the trace candidate this is the final entry: the Performance API
+ * keeps every candidate, so the last one is the real largest contentful
+ * paint element. `loadTime` and `renderTime` give the genuine Chrome
+ * breakdown of the LCP timestamp.
+ */
+export const LCPEntrySchema = z.object({
+  startTime: z.number(),
+  size: z.number(),
+  url: z.string().optional(),
+  elementTag: z.string().optional(),
+  elementId: z.string().optional(),
+  elementClass: z.string().optional(),
+  loadTime: z.number().optional(),
+  renderTime: z.number().optional(),
+});
+export type LCPEntry = z.infer<typeof LCPEntrySchema>;
+
+/**
+ * The largest contentful paint candidate reported by the trace.
+ *
+ * Chrome emits one `largestContentfulPaint::Candidate` event per candidate
+ * and keeps the last one as the final LCP element. `type` tells whether the
+ * element was an image or a text node, which decides whether a network
+ * resource can be attributed to the LCP at all.
+ */
+export const LCPCandidateSchema = z.object({
+  type: z.enum(['text', 'image', 'unknown']),
+  size: z.number().optional(),
+  nodeName: z.string().optional(),
+  url: z.string().optional(),
+});
+export type LCPCandidate = z.infer<typeof LCPCandidateSchema>;
+
 export const ThreadActivitySchema = z.object({
   totalMs: z.number(),
   byCategory: z.record(z.string(), z.number()),
@@ -62,6 +98,8 @@ export const TraceSummarySchema = z.object({
 export const PerformanceIRSchema = z.object({
   navigation: PerformanceNavigationSchema,
   coreWebVitals: CoreWebVitalsSchema,
+  lcpEntry: LCPEntrySchema.optional(),
+  lcpCandidate: LCPCandidateSchema.optional(),
   traceSummary: TraceSummarySchema,
   mainThreadBusyness: z.number().min(0).max(1),
 });

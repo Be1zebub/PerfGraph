@@ -77,7 +77,7 @@
     },
     {
       "cat": "devtools.timeline",
-      "name": "LargestContentfulPaint::Candidate",
+      "name": "largestContentfulPaint::Candidate",
       "ph": "I",
       "ts": 2200000,
       "pid": 1,
@@ -85,7 +85,10 @@
       "args": {
         "data": {
           "size": 42000,
-          "candidateIndex": 1
+          "candidateIndex": 1,
+          "type": "image",
+          "nodeName": "IMG class='hero'",
+          "url": "https://example.com/hero.jpg"
         }
       }
     }

@@ -49,6 +49,11 @@ read artifacts in this order:
 6. `trace.json`, `network.json`, `lighthouse.json`, and other raw files only
    when the compact artifacts lack the evidence needed for the question.
 
+`insights.toon` carries two metric blocks. `metrics` holds the values measured
+in the PerfGraph run (the run described by `runContext`); `lighthouse` holds
+the values from Lighthouse's own throttled run. They are different runs and
+must not be merged. Cite each one with its source.
+
 `.toon` files are text in Token-Oriented Object Notation. Read them as text;
 do not assume they are JSON or call `JSON.parse` on them.
 
@@ -118,3 +123,11 @@ impact and expected-impact status, and a verification step. Use impact surface
 to distinguish initial viewport, LCP, interaction, and total-page work. For a text LCP element, prioritize render
 delay, main-thread work, and blocking styles/scripts; do not recommend image
 format or image priority changes without image evidence.
+
+The LCP element comes from the browser itself: `insights.lcpElement.source` is
+`performance-api`, `lighthouse` or `trace`, and `type` is `text` or `image`.
+Only an image LCP carries an `lcpElementUrl` and resource load timings. When
+the element is unknown, report the LCP as a single render delay instead of
+naming a resource. Never present the largest downloaded image as the LCP
+element. The traced lab LCP and the Lighthouse LCP come from two different
+runs — report both with their source instead of merging them.

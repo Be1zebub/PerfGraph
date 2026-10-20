@@ -22,9 +22,11 @@ export const LCPBreakdownSchema = z.object({
   lcpElementUrl: z.string().optional(),
   lcpResourceType: z.string().optional(),
   lcpElement: z.object({
-    selector: z.string(),
+    selector: z.string().optional(),
     snippet: z.string().optional(),
     nodeLabel: z.string().optional(),
+    source: z.enum(['trace', 'performance-api', 'lighthouse']).optional(),
+    type: z.enum(['text', 'image', 'unknown']).optional(),
   }).optional(),
   source: z.enum(['trace', 'lighthouse', 'mixed']).optional(),
 });
@@ -155,10 +157,19 @@ export const RenderBlockingScoreSchema = z.object({
 // FeatureSet — полный набор вычисленных фич
 // ---------------------------------------------------------------------------
 
+export const CoreWebVitalsFeatureSchema = z.object({
+  fcp: z.number().optional(),
+  lcp: z.number().optional(),
+  cls: z.number().optional(),
+  tbt: z.number().optional(),
+});
+
 export const FeatureSetSchema = z.strictObject({
   /** Target URL that was analyzed */
   url: z.string().optional(),
   runContext: RunContextSchema.optional(),
+  /** Core Web Vitals measured in the traced browser run */
+  coreWebVitals: CoreWebVitalsFeatureSchema.optional(),
   lcpBreakdown: LCPBreakdownSchema.optional(),
   criticalPath: CriticalPathSchema.optional(),
   mainThreadBlocking: MainThreadBlockingSchema.optional(),

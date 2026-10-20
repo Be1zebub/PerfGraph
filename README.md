@@ -202,7 +202,7 @@ is printed as JSON on stdout. Key sections:
  "meta": {
   "url": "https://example.com",
   "analyzedAt": "2026-06-09T19:15:19.000Z",
-  "reportVersion": "1.2.0",
+  "reportVersion": "1.3.0",
   "featureCount": 7,
   "graphNodeCount": 24,
   "graphEdgeCount": 31,

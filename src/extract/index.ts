@@ -25,6 +25,7 @@ export function extract(ir: IRBundle): FeatureSet {
   return {
     url: ir.meta.url || undefined,
     runContext: ir.meta.context,
+    coreWebVitals: ir.performance.coreWebVitals,
     lcpBreakdown: extractLCPBreakdown(ir),
     criticalPath: extractCriticalPath(ir),
     mainThreadBlocking: extractMainThreadBlocking(ir),

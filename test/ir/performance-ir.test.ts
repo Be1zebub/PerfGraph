@@ -65,7 +65,89 @@ describe('PerformanceIR builder', () => {
   });
 
   // -----------------------------------------------------------------------
-  // Test 2: handles empty trace
+  // Test 2: LCP candidate parsing
+  // -----------------------------------------------------------------------
+  describe('LCP candidate', () => {
+    it('parses the candidate from the event name Chrome actually emits', () => {
+      const trace = loadFixture('fixtures', 'ir', 'trace-with-navigation.json') as TraceRawData;
+      const perf = loadFixture('fixtures', 'performance', 'minimal-valid.json') as PerformanceRawData;
+      const anchor = resolveClockAnchor({ trace, performance: perf });
+      const ir = buildPerformanceIR(trace, perf, anchor);
+
+      const names = (trace.events ?? []).map((e) => e.name);
+      expect(names).toContain('largestContentfulPaint::Candidate');
+      expect(ir.coreWebVitals.lcp).toBe(1200);
+      expect(ir.lcpCandidate).toBeDefined();
+      expect(ir.lcpCandidate!.type).toBe('image');
+      expect(ir.lcpCandidate!.size).toBe(42000);
+      expect(ir.lcpCandidate!.nodeName).toBe("IMG class='hero'");
+      expect(ir.lcpCandidate!.url).toBe('https://example.com/hero.jpg');
+    });
+
+    it('accepts the capitalized spelling of the event name', () => {
+      const trace = loadFixture('fixtures', 'ir', 'trace-with-navigation.json') as TraceRawData;
+      const perf = loadFixture('fixtures', 'performance', 'minimal-valid.json') as PerformanceRawData;
+      const anchor = resolveClockAnchor({ trace, performance: perf });
+
+      const renamed: TraceRawData = {
+        ...trace,
+        events: (trace.events ?? []).map((e) =>
+          e.name === 'largestContentfulPaint::Candidate'
+            ? { ...e, name: 'LargestContentfulPaint::Candidate' }
+            : e,
+        ),
+      };
+
+      const ir = buildPerformanceIR(renamed, perf, anchor);
+      expect(ir.coreWebVitals.lcp).toBe(1200);
+      expect(ir.lcpCandidate!.type).toBe('image');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Test 3: Performance API LCP entry
+  // -----------------------------------------------------------------------
+  describe('Performance API LCP entry', () => {
+    it('prefers the Performance API entry over the trace candidate', () => {
+      const trace = loadFixture('fixtures', 'ir', 'trace-with-navigation.json') as TraceRawData;
+      const perf = loadFixture('fixtures', 'performance', 'minimal-valid.json') as PerformanceRawData;
+      const anchor = resolveClockAnchor({ trace, performance: perf });
+
+      const ir = buildPerformanceIR(trace, perf, anchor, {
+        startTime: 2400,
+        size: 162_572,
+        elementTag: 'h1',
+        elementClass: 'headline',
+      });
+
+      expect(ir.coreWebVitals.lcp).toBe(2400);
+      expect(ir.lcpEntry).toBeDefined();
+      expect(ir.lcpEntry!.startTime).toBe(2400);
+      expect(ir.lcpCandidate!.type).toBe('text');
+      expect(ir.lcpCandidate!.nodeName).toBe('h1.headline');
+    });
+
+    it('marks an entry with a resource URL as an image candidate', () => {
+      const trace = loadFixture('fixtures', 'ir', 'trace-with-navigation.json') as TraceRawData;
+      const perf = loadFixture('fixtures', 'performance', 'minimal-valid.json') as PerformanceRawData;
+      const anchor = resolveClockAnchor({ trace, performance: perf });
+
+      const ir = buildPerformanceIR(trace, perf, anchor, {
+        startTime: 1800,
+        size: 90_000,
+        url: 'https://example.com/hero.jpg',
+        elementTag: 'img',
+        elementId: 'hero',
+      });
+
+      expect(ir.lcpCandidate!.type).toBe('image');
+      expect(ir.lcpCandidate!.url).toBe('https://example.com/hero.jpg');
+      expect(ir.lcpCandidate!.nodeName).toBe('img#hero');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Test 4: handles empty trace
   // -----------------------------------------------------------------------
   describe('handles empty trace', () => {
     let ir: PerformanceIR;

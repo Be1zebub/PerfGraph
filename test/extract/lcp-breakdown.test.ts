@@ -53,6 +53,7 @@ describe('extractLCPBreakdown', () => {
       performance: {
         navigation: { url: 'https://example.com', navigationStart: 0, domContentLoaded: 500, domContentLoadedEventEnd: 550, loadEventStart: 1200, loadEventEnd: 1300, domInteractive: 400 },
         coreWebVitals: { lcp: 3000 },
+        lcpCandidate: { type: 'image', nodeName: 'IMG#hero', url: 'https://example.com/hero.jpg', size: 100_000 },
         traceSummary: { totalDuration: 5000, eventCount: 100, categories: {}, threadActivity: { totalMs: 5000, byCategory: {} } },
         mainThreadBusyness: 0.3,
       },
@@ -100,7 +101,78 @@ describe('extractLCPBreakdown', () => {
     expect(result!.lcpElementUrl).toBe('https://example.com/hero.jpg');
     expect(result!.lcpResourceType).toBe('Image');
     expect(result!.source).toBe('trace');
-    expect(result!.lcpElement).toBeUndefined();
+    expect(result!.lcpElement!.source).toBe('trace');
+    expect(result!.lcpElement!.type).toBe('image');
+  });
+
+  // ---------------------------------------------------------------------------
+  // Text LCP: no resource may be attributed
+  // ---------------------------------------------------------------------------
+  it('does not attribute a resource when the trace reports a text LCP candidate', () => {
+    const ir = makeIRBundle({
+      performance: {
+        navigation: { url: 'https://example.com', navigationStart: 0, domContentLoaded: 500, domContentLoadedEventEnd: 550, loadEventStart: 1200, loadEventEnd: 1300, domInteractive: 400 },
+        coreWebVitals: { lcp: 2400 },
+        lcpCandidate: { type: 'text', nodeName: "H1 class='headline'", size: 162_572 },
+        traceSummary: { totalDuration: 5000, eventCount: 100, categories: {}, threadActivity: { totalMs: 5000, byCategory: {} } },
+        mainThreadBusyness: 0.3,
+      },
+      network: {
+        requests: [
+          {
+            url: 'https://example.com/', method: 'GET', resourceType: 'Document', statusCode: 200,
+            startTime: 0, endTime: 400, duration: 400, bytes: 5000, priority: 'VeryHigh',
+            initiator: '', failed: false,
+            timing: { dns: 10, connect: 20, ssl: 30, wait: 40, receive: 300 },
+          },
+          {
+            url: 'https://example.com/favicon.svg', method: 'GET', resourceType: 'Image', statusCode: 200,
+            startTime: 500, endTime: 600, duration: 100, bytes: 677, priority: 'Low',
+            initiator: '', failed: false,
+            timing: {},
+          },
+        ],
+        summary: { totalRequests: 2, totalBytes: 5677, byType: { Document: 1, Image: 1 }, byPriority: { VeryHigh: 1, Low: 1 }, criticalPath: { tree: { url: '' }, depth: 0, urlsOnLongestPath: [] }, longestChain: { url: '', length: 0 } },
+      },
+    });
+
+    const result = extractLCPBreakdown(ir);
+    expect(result).toBeDefined();
+    expect(result!.lcpElementUrl).toBeUndefined();
+    expect(result!.lcpResourceType).toBeUndefined();
+    expect(result!.resourceLoadDelay).toBe(0);
+    expect(result!.resourceLoadTime).toBe(0);
+    expect(result!.elementRenderDelay).toBe(2400 - 100);
+    expect(result!.lcpElement!.nodeLabel).toBe("H1 class='headline'");
+    expect(result!.lcpElement!.type).toBe('text');
+  });
+
+  it('never attributes a favicon as the LCP resource', () => {
+    const ir = makeIRBundle({
+      performance: {
+        navigation: { url: 'https://example.com', navigationStart: 0, domContentLoaded: 500, domContentLoadedEventEnd: 550, loadEventStart: 1200, loadEventEnd: 1300, domInteractive: 400 },
+        coreWebVitals: { lcp: 2000 },
+        lcpCandidate: { type: 'image', nodeName: 'IMG#hero' },
+        traceSummary: { totalDuration: 5000, eventCount: 100, categories: {}, threadActivity: { totalMs: 5000, byCategory: {} } },
+        mainThreadBusyness: 0.3,
+      },
+      network: {
+        requests: [
+          {
+            url: 'https://example.com/favicon.ico', method: 'GET', resourceType: 'Image', statusCode: 200,
+            startTime: 100, endTime: 900, duration: 800, bytes: 90_000, priority: 'Low',
+            initiator: '', failed: false,
+            timing: {},
+          },
+        ],
+        summary: { totalRequests: 1, totalBytes: 90_000, byType: { Image: 1 }, byPriority: { Low: 1 }, criticalPath: { tree: { url: '' }, depth: 0, urlsOnLongestPath: [] }, longestChain: { url: '', length: 0 } },
+      },
+    });
+
+    const result = extractLCPBreakdown(ir);
+    expect(result).toBeDefined();
+    expect(result!.lcpElementUrl).toBeUndefined();
+    expect(result!.elementRenderDelay).toBe(2000);
   });
 
   // ---------------------------------------------------------------------------
@@ -276,6 +348,9 @@ describe('extractLCPBreakdown', () => {
         failedAudits: [],
         scores: {},
         lcpNumericValue: 2400,
+        lcpElementSelector: 'img.hero',
+        lcpElementSnippet: '<img class="hero" src="hero.jpg">',
+        lcpElementNodeLabel: 'img.hero',
       },
     });
 
@@ -294,7 +369,7 @@ describe('extractLCPBreakdown', () => {
     expect(result!.elementRenderDelay).toBe(600);
     expect(result!.lcpElementUrl).toBe('https://example.com/hero.jpg');
     expect(result!.lcpResourceType).toBe('Image');
-    expect(result!.lcpElement).toBeUndefined();
+    expect(result!.lcpElement!.selector).toBe('img.hero');
   });
 
   it('uses Lighthouse lcpNumericValue with lcpElement when trace LCP is missing and Lighthouse has element details', () => {
@@ -372,6 +447,91 @@ describe('extractLCPBreakdown', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // Performance API entry: measured breakdown
+  // ---------------------------------------------------------------------------
+  it('uses the measured load and render times of the Performance API entry', () => {
+    const ir = makeIRBundle({
+      performance: {
+        navigation: { url: 'https://example.com', navigationStart: 0, domContentLoaded: 500, domContentLoadedEventEnd: 550, loadEventStart: 1200, loadEventEnd: 1300, domInteractive: 400 },
+        coreWebVitals: { lcp: 2000 },
+        lcpEntry: {
+          startTime: 2000,
+          size: 90_000,
+          url: 'https://example.com/hero.jpg',
+          elementTag: 'img',
+          elementId: 'hero',
+          loadTime: 900,
+          renderTime: 1400,
+        },
+        lcpCandidate: { type: 'image', nodeName: 'img#hero', url: 'https://example.com/hero.jpg' },
+        traceSummary: { totalDuration: 5000, eventCount: 100, categories: {}, threadActivity: { totalMs: 5000, byCategory: {} } },
+        mainThreadBusyness: 0.3,
+      },
+      network: {
+        requests: [
+          {
+            url: 'https://example.com/', method: 'GET', resourceType: 'Document', statusCode: 200,
+            startTime: 0, endTime: 400, duration: 400, bytes: 5000, priority: 'VeryHigh',
+            initiator: '', failed: false,
+            timing: { dns: 10, connect: 20, ssl: 30, wait: 40, receive: 300 },
+          },
+          {
+            url: 'https://example.com/hero.jpg', method: 'GET', resourceType: 'Image', statusCode: 200,
+            startTime: 500, endTime: 2500, duration: 2000, bytes: 100_000, priority: 'High',
+            initiator: '', failed: false,
+            timing: {},
+          },
+        ],
+        summary: { totalRequests: 2, totalBytes: 105_000, byType: { Document: 1, Image: 1 }, byPriority: { VeryHigh: 1, High: 1 }, criticalPath: { tree: { url: '' }, depth: 0, urlsOnLongestPath: [] }, longestChain: { url: '', length: 0 } },
+      },
+    });
+
+    const result = extractLCPBreakdown(ir);
+    expect(result).toBeDefined();
+    expect(result!.ttfb).toBe(100);
+    // loadTime(900) - ttfb(100)
+    expect(result!.resourceLoadDelay).toBe(800);
+    // renderTime(1400) - loadTime(900)
+    expect(result!.resourceLoadTime).toBe(500);
+    // startTime(2000) - renderTime(1400)
+    expect(result!.elementRenderDelay).toBe(600);
+    expect(result!.lcpElementUrl).toBe('https://example.com/hero.jpg');
+    expect(result!.lcpElement!.source).toBe('performance-api');
+    expect(result!.lcpElement!.nodeLabel).toBe('img#hero');
+  });
+
+  it('does not attribute a resource for a text Performance API entry', () => {
+    const ir = makeIRBundle({
+      performance: {
+        navigation: { url: 'https://example.com', navigationStart: 0, domContentLoaded: 500, domContentLoadedEventEnd: 550, loadEventStart: 1200, loadEventEnd: 1300, domInteractive: 400 },
+        coreWebVitals: { lcp: 1800 },
+        lcpEntry: { startTime: 1800, size: 162_572, elementTag: 'h1', elementClass: 'headline' },
+        lcpCandidate: { type: 'text', nodeName: 'h1.headline' },
+        traceSummary: { totalDuration: 5000, eventCount: 100, categories: {}, threadActivity: { totalMs: 5000, byCategory: {} } },
+        mainThreadBusyness: 0.3,
+      },
+      network: {
+        requests: [
+          {
+            url: 'https://example.com/', method: 'GET', resourceType: 'Document', statusCode: 200,
+            startTime: 0, endTime: 400, duration: 400, bytes: 5000, priority: 'VeryHigh',
+            initiator: '', failed: false,
+            timing: { dns: 10, connect: 20, ssl: 30, wait: 40, receive: 300 },
+          },
+        ],
+        summary: { totalRequests: 1, totalBytes: 5000, byType: { Document: 1 }, byPriority: { VeryHigh: 1 }, criticalPath: { tree: { url: '' }, depth: 0, urlsOnLongestPath: [] }, longestChain: { url: '', length: 0 } },
+      },
+    });
+
+    const result = extractLCPBreakdown(ir);
+    expect(result).toBeDefined();
+    expect(result!.lcpElementUrl).toBeUndefined();
+    expect(result!.elementRenderDelay).toBe(1800 - 100);
+    expect(result!.lcpElement!.type).toBe('text');
+    expect(result!.lcpElement!.source).toBe('performance-api');
+  });
+
+  // ---------------------------------------------------------------------------
   // Negative clamping
   // ---------------------------------------------------------------------------
   it('clamps negative elementRenderDelay to 0', () => {
@@ -379,6 +539,7 @@ describe('extractLCPBreakdown', () => {
       performance: {
         navigation: { url: 'https://example.com', navigationStart: 0, domContentLoaded: 500, domContentLoadedEventEnd: 550, loadEventStart: 1200, loadEventEnd: 1300, domInteractive: 400 },
         coreWebVitals: { lcp: 1000 },
+        lcpCandidate: { type: 'image', nodeName: 'IMG#fast', url: 'https://example.com/fast.jpg' },
         traceSummary: { totalDuration: 5000, eventCount: 100, categories: {}, threadActivity: { totalMs: 5000, byCategory: {} } },
         mainThreadBusyness: 0.3,
       },

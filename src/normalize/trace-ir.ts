@@ -7,7 +7,7 @@
  */
 
 import type { TraceRawData, PerformanceRawData } from '../collect/types.js';
-import type { PerformanceIR, CoreWebVitals, TraceSummary, ThreadActivity, PerformanceNavigation } from './types.js';
+import type { PerformanceIR, CoreWebVitals, LCPEntry, LCPCandidate, TraceSummary, ThreadActivity, PerformanceNavigation } from './types.js';
 import { toRelativeMs } from './clock.js';
 import type { ClockDomain, ClockAnchor } from './clock.js';
 
@@ -35,11 +35,20 @@ function getArg(args: Record<string, unknown>, path: string[]): unknown {
 /** Trace event names the PerformanceIR builder cares about */
 const EVENT_NAMES = new Set([
   'firstContentfulPaint',
-  'LargestContentfulPaint::Candidate',
+  'largestContentfulPaint::Candidate',
   'MarkDOMContent',
   'MarkLoad',
   'LayoutShift',
   'LongTask',
+]);
+
+/**
+ * Chrome has shipped the LCP trace event under two spellings. Accept both so
+ * the trace LCP is not silently dropped on one of them.
+ */
+const LCP_CANDIDATE_EVENTS = new Set([
+  'largestContentfulPaint::Candidate',
+  'LargestContentfulPaint::Candidate',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -84,21 +93,52 @@ function buildNavigation(
 // ---------------------------------------------------------------------------
 
 /**
+ * Parse the LCP candidate payload of a trace event.
+ *
+ * The candidate carries the painted size, the node label and the element
+ * type. The type decides whether a network resource can be attributed to
+ * the LCP at all: a text candidate has no resource to attribute.
+ */
+function parseLcpCandidate(ev: TraceRawData['events'][number]): LCPCandidate | undefined {
+  const data = getArg(ev.args, ['data']);
+  if (!data || typeof data !== 'object') return undefined;
+
+  const record = data as Record<string, unknown>;
+  const rawType = typeof record.type === 'string' ? record.type.toLowerCase() : '';
+  const type: LCPCandidate['type'] =
+    rawType === 'text' ? 'text' : rawType === 'image' ? 'image' : 'unknown';
+
+  const candidate: LCPCandidate = { type };
+  if (isNumber(record.size)) candidate.size = record.size;
+  if (typeof record.nodeName === 'string' && record.nodeName.length > 0) {
+    candidate.nodeName = record.nodeName;
+  }
+  if (typeof record.url === 'string' && record.url.length > 0) {
+    candidate.url = record.url;
+  }
+  return candidate;
+}
+
+/**
  * Build CoreWebVitals from trace events.
  *
  * - FCP: firstContentfulPaint trace event ts → relative ms
- * - LCP: LargestContentfulPaint::Candidate trace event ts → relative ms
+ * - LCP: largestContentfulPaint::Candidate trace event ts → relative ms
  * - CLS: sum of LayoutShift events args.data.cumulative_score
  * - TBT: sum of (LongTask event dur - 50) in ms
+ *
+ * The last LCP candidate event wins, matching how Chrome reports the final
+ * largest contentful paint element.
  */
 function buildCoreWebVitals(
   events: TraceRawData['events'],
   anchor: ClockAnchor,
-): CoreWebVitals {
+): { coreWebVitals: CoreWebVitals; lcpCandidate?: LCPCandidate } {
   let fcp: number | undefined;
   let lcp: number | undefined;
   let cls = 0;
   let tbt = 0;
+  let lcpCandidate: LCPCandidate | undefined;
 
   for (const ev of events) {
     switch (ev.name) {
@@ -106,8 +146,10 @@ function buildCoreWebVitals(
         fcp = toRelativeMs(ev.ts, 'cdp-monotonic-us', anchor);
         break;
       }
+      case 'largestContentfulPaint::Candidate':
       case 'LargestContentfulPaint::Candidate': {
         lcp = toRelativeMs(ev.ts, 'cdp-monotonic-us', anchor);
+        lcpCandidate = parseLcpCandidate(ev);
         break;
       }
       case 'LayoutShift': {
@@ -136,10 +178,13 @@ function buildCoreWebVitals(
   }
 
   return {
-    fcp: fcp ?? undefined,
-    lcp: lcp ?? undefined,
-    cls: cls > 0 ? cls : undefined,
-    tbt: tbt > 0 ? tbt : undefined,
+    coreWebVitals: {
+      fcp: fcp ?? undefined,
+      lcp: lcp ?? undefined,
+      cls: cls > 0 ? cls : undefined,
+      tbt: tbt > 0 ? tbt : undefined,
+    },
+    lcpCandidate,
   };
 }
 
@@ -234,17 +279,48 @@ function buildTraceSummary(
 // ---------------------------------------------------------------------------
 
 /**
+ * Build the LCP candidate description from a Performance API entry.
+ *
+ * The entry is the final candidate, so it describes the element that really
+ * was the largest contentful paint.
+ */
+function candidateFromEntry(entry: LCPEntry): LCPCandidate {
+  const type: LCPCandidate['type'] = entry.url ? 'image' : 'text';
+  const candidate: LCPCandidate = { type };
+  if (Number.isFinite(entry.size)) candidate.size = entry.size;
+  if (entry.url) candidate.url = entry.url;
+
+  const label = describeElement(entry);
+  if (label) candidate.nodeName = label;
+
+  return candidate;
+}
+
+/** Build a short element description like `h1.headline` from an LCP entry. */
+function describeElement(entry: LCPEntry): string | undefined {
+  const tag = entry.elementTag;
+  if (!tag) return undefined;
+  const id = entry.elementId ? `#${entry.elementId}` : '';
+  const className = entry.elementClass
+    ? `.${entry.elementClass.trim().split(/\s+/).join('.')}`
+    : '';
+  return `${tag}${id}${className}`;
+}
+
+/**
  * Build a complete PerformanceIR from trace and performance raw data.
  *
  * @param trace - Raw trace events from the TraceCollector
  * @param perf  - Raw performance metrics from the PerformanceCollector
  * @param anchor - ClockAnchor with navigationStart time
+ * @param lcp - Final largest contentful paint entry from the Performance API
  * @returns A fully-constructed PerformanceIR
  */
 export function buildPerformanceIR(
   trace: TraceRawData,
   perf: PerformanceRawData,
   anchor: ClockAnchor,
+  lcp?: LCPEntry,
 ): PerformanceIR {
   const events = trace.events ?? [];
   const eventCount = events.length;
@@ -256,8 +332,16 @@ export function buildPerformanceIR(
   }
 
   const navigation = buildNavigation(events, anchor);
-  const coreWebVitals = buildCoreWebVitals(events, anchor);
+  const { coreWebVitals, lcpCandidate: traceCandidate } = buildCoreWebVitals(events, anchor);
   const traceSummary = buildTraceSummary(events, anchor);
+
+  // The Performance API entry is the final LCP candidate, so it wins over the
+  // trace, which may only carry the first candidate after navigation.
+  let lcpCandidate = traceCandidate;
+  if (lcp) {
+    coreWebVitals.lcp = lcp.startTime;
+    lcpCandidate = candidateFromEntry(lcp);
+  }
 
   // mainThreadBusyness = main thread activity / total trace duration
   const mainThreadBusyness =
@@ -268,6 +352,8 @@ export function buildPerformanceIR(
   const result: PerformanceIR = {
     navigation,
     coreWebVitals,
+    lcpEntry: lcp,
+    lcpCandidate,
     traceSummary,
     mainThreadBusyness,
   };

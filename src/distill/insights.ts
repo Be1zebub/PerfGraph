@@ -29,6 +29,27 @@ export interface Insights {
   url: string;
   analyzedAt: string;
   runContext?: RunContext;
+  /**
+   * Core Web Vitals measured by PerfGraph in the traced browser run.
+   *
+   * These come from the run described by `runContext` — an unthrottled
+   * desktop navigation unless the run says otherwise.
+   */
+  metrics: {
+    lcpMs?: number;
+    /** Which run the LCP value came from */
+    lcpSource?: 'trace' | 'lighthouse';
+    fcpMs?: number;
+    cls?: number;
+    tbtMs?: number;
+    tbtStatus?: 'measured' | 'unavailable';
+  };
+  /**
+   * Metrics reported by Lighthouse from its own navigation.
+   *
+   * Lighthouse applies its own throttling, so these values describe a
+   * different run than `metrics` and must not be merged with it.
+   */
   lighthouse: {
     performance?: number;
     accessibility?: number;
@@ -44,6 +65,8 @@ export interface Insights {
     selector: string;
     snippet?: string;
     nodeLabel?: string;
+    source?: 'trace' | 'performance-api' | 'lighthouse';
+    type?: 'text' | 'image' | 'unknown';
     renderDelayMs?: number;
     resourceLoadDelayMs?: number;
     resourceLoadTimeMs?: number;
@@ -168,22 +191,37 @@ function extractScores(raw: unknown): {
 // Build helpers
 // ---------------------------------------------------------------------------
 
-/** Build lcpElement from Lighthouse insights + features. */
+/**
+ * Build lcpElement from Lighthouse insights + features.
+ *
+ * Lighthouse does not always expose the LCP element — its breakdown audit
+ * carries no details on every version. The trace candidate does, so it is
+ * used as the fallback and reports where the element came from.
+ */
 function buildLcpElement(
   insights: LighthouseInsights,
   features: FeatureSet,
 ): Insights['lcpElement'] | undefined {
   const lb = insights.lcpBreakdown;
-  if (!lb) return undefined;
+  const featureElement = features.lcpBreakdown?.lcpElement;
+
+  if (!lb && !featureElement) return undefined;
+
+  const selector = lb?.lcpElementSelector ?? featureElement?.selector ?? '';
+  const nodeLabel = lb?.lcpElementNodeLabel ?? featureElement?.nodeLabel;
+
+  if (!selector && !nodeLabel) return undefined;
 
   return {
-    selector: lb.lcpElementSelector ?? '',
-    snippet: lb.lcpElementSnippet,
-    nodeLabel: lb.lcpElementNodeLabel,
-    renderDelayMs: lb.elementRenderDelay,
+    selector,
+    snippet: lb?.lcpElementSnippet ?? featureElement?.snippet,
+    nodeLabel,
+    source: lb?.lcpElementSelector ? 'lighthouse' : featureElement?.source,
+    type: featureElement?.type,
+    renderDelayMs: lb?.elementRenderDelay,
     resourceLoadDelayMs: features.lcpBreakdown?.resourceLoadDelay,
     resourceLoadTimeMs: features.lcpBreakdown?.resourceLoadTime,
-    ttfbMs: lb.timeToFirstByte,
+    ttfbMs: lb?.timeToFirstByte,
   };
 }
 
@@ -457,23 +495,20 @@ export function buildInsights(
   // 3. Navigate to LHR audit container
   const lhr = getLHRRoot(lighthouseJson);
 
-  // 4. Metrics from Lighthouse audits (fallback chain)
+  // 4. Metrics from Lighthouse audits
   const lcpAuditMs = getAuditNumericValue(lhr, 'largest-contentful-paint');
-  const fcpMs = getAuditNumericValue(lhr, 'first-contentful-paint');
+  const fcpAuditMs = getAuditNumericValue(lhr, 'first-contentful-paint');
   const clsAudit = getAuditNumericValue(lhr, 'cumulative-layout-shift');
   const tbtAudit = getAuditNumericValue(lhr, 'total-blocking-time');
 
-  // LCP: prefer FeatureSet breakdown total, then Lighthouse insight
-  // composite, then raw audit
-  const lcpMs =
-    features.lcpBreakdown?.totalLCP ??
-    (lighthouseInsights.lcpBreakdown
-      ? lighthouseInsights.lcpBreakdown.timeToFirstByte +
-        lighthouseInsights.lcpBreakdown.elementRenderDelay
-      : undefined) ??
-    lcpAuditMs;
-
-  // CLS: prefer FeatureSet, then raw audit
+  // Lab metrics: measured in the traced run described by runContext.
+  const lcpMs = features.lcpBreakdown?.totalLCP;
+  const lcpSource = lcpMs !== undefined
+    ? 'trace'
+    : lighthouseInsights.lcpBreakdown
+      ? 'lighthouse'
+      : undefined;
+  const fcpMs = features.coreWebVitals?.fcp ?? fcpAuditMs;
   const cls = features.layoutShifts?.cls ?? clsAudit;
 
   // TBT: use only a measured Lighthouse/IR TBT value. Main-thread busy time is
@@ -518,16 +553,24 @@ export function buildInsights(
     url: features.url ?? '',
     analyzedAt: new Date().toISOString(),
     runContext: features.runContext,
+    metrics: {
+      lcpMs,
+      lcpSource,
+      fcpMs,
+      cls,
+      tbtMs,
+      tbtStatus: tbtMs != null ? 'measured' : 'unavailable',
+    },
     lighthouse: {
       performance: scores.performance,
       accessibility: scores.accessibility,
       bestPractices: scores.bestPractices,
       seo: scores.seo,
-      lcpMs,
-      fcpMs,
-      cls,
-      tbtMs,
-      tbtStatus: tbtMs != null ? 'measured' : 'unavailable',
+      lcpMs: lcpAuditMs,
+      fcpMs: fcpAuditMs,
+      cls: clsAudit,
+      tbtMs: tbtAudit,
+      tbtStatus: tbtAudit != null ? 'measured' : 'unavailable',
     },
     lcpElement,
     renderBlocking,

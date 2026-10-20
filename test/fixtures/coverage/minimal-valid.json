@@ -1,0 +1,56 @@
+{
+  "js": [
+    {
+      "scriptId": "1",
+      "url": "https://example.com/app.js",
+      "functions": [
+        {
+          "functionName": "initApp",
+          "ranges": [
+            { "startOffset": 0, "endOffset": 150, "count": 1 },
+            { "startOffset": 200, "endOffset": 350, "count": 1 }
+          ],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "handleClick",
+          "ranges": [
+            { "startOffset": 400, "endOffset": 480, "count": 0 }
+          ],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "2",
+      "url": "https://example.com/vendor.js",
+      "functions": [
+        {
+          "functionName": "linearAlgebra",
+          "ranges": [
+            { "startOffset": 0, "endOffset": 5000, "count": 1 }
+          ],
+          "isBlockCoverage": false
+        }
+      ]
+    }
+  ],
+  "css": [
+    {
+      "styleSheetId": "sheet1",
+      "url": "https://example.com/style.css",
+      "ranges": [
+        { "startOffset": 0, "endOffset": 800, "count": 1 },
+        { "startOffset": 900, "endOffset": 1200, "count": 0 }
+      ]
+    },
+    {
+      "styleSheetId": "sheet2",
+      "url": "https://example.com/print.css",
+      "ranges": [
+        { "startOffset": 0, "endOffset": 300, "count": 1 }
+      ]
+    }
+  ],
+  "warnings": []
+}

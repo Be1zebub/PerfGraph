@@ -10,6 +10,7 @@
 
 import type { CDPSession } from 'playwright';
 import type { CollectorRunOptions, RunContext } from '../shared/types.js';
+import type { LcpEntry } from './lcp.js';
 
 // ---------------------------------------------------------------------------
 // Collector Interface
@@ -48,6 +49,7 @@ export interface Collector {
  */
 export interface RawDataBundle {
   context?: RunContext;
+  lcp?: LcpEntry;
   trace?: unknown;
   network?: unknown;
   performance?: unknown;

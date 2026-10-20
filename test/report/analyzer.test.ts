@@ -142,7 +142,7 @@ describe('buildReport', () => {
     expect(parsed.success, 'Report must pass Zod schema validation').toBe(true);
 
     // Meta
-    expect(report.meta.reportVersion).toBe('1.2.0');
+    expect(report.meta.reportVersion).toBe('1.3.0');
     expect(report.meta.graphNodeCount).toBeGreaterThan(0);
     expect(report.meta.graphEdgeCount).toBeGreaterThan(0);
 

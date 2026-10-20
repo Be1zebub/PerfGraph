@@ -5,13 +5,16 @@
  *   TTFB → Resource Load Delay → Resource Load Time → Element Render Delay
  */
 
-import type { IRBundle, NormalizedRequest } from '../normalize/types.js';
+import type { IRBundle, LCPEntry, NormalizedRequest } from '../normalize/types.js';
 import type { LCPBreakdown } from './types.js';
 
-/** Safely clamp a number to 0 if it's negative, NaN, or Infinity. */
+/** Safely clamp a number to 0 if it is negative, NaN, or Infinity. */
 function clamp(value: number): number {
   return Number.isFinite(value) && value >= 0 ? value : 0;
 }
+
+/** What kind of element produced the LCP. */
+type LcpElementKind = 'text' | 'image' | 'unknown';
 
 /**
  * Find the Document request (first page navigation) from the network log.
@@ -21,27 +24,152 @@ function findDocumentRequest(requests: NormalizedRequest[]): NormalizedRequest |
 }
 
 /**
- * Find the most likely LCP resource among network requests.
- * Chrome LCP is typically the largest image (by bytes) or a text node.
- * Returns undefined for text-only LCP.
+ * A favicon is never a largest contentful paint element — Chrome excludes it
+ * from the candidate set. Keeping it in the pool made an arbitrary icon look
+ * like the LCP resource.
  */
-function findLcpResource(ir: IRBundle): NormalizedRequest | undefined {
-  const requests = ir.network.requests;
-  const nodeLabel = ir.lighthouse.lcpElementNodeLabel?.toLowerCase() ?? '';
-  const snippet = ir.lighthouse.lcpElementSnippet?.toLowerCase() ?? '';
-  const selector = ir.lighthouse.lcpElementSelector?.toLowerCase() ?? '';
-  if (nodeLabel && !['img', 'image', 'video', 'svg'].some((kind) => nodeLabel.includes(kind))) {
-    return undefined;
+function isFavicon(url: string): boolean {
+  return /\/favicon[^/]*$|\.ico($|[?#])/i.test(url);
+}
+
+/**
+ * Classify an element from its label, snippet or selector.
+ *
+ * Only explicit image and text elements are classified. A generic container
+ * stays unknown, because it may be a text block or a background image.
+ */
+function classifyElement(text: string): LcpElementKind {
+  const value = text.toLowerCase();
+  if (!value) return 'unknown';
+  if (/(<|\b)(img|image|svg|video|picture|source)\b/.test(value)) return 'image';
+  if (/(<|\b)(p|h1|h2|h3|h4|h5|h6|span|ul|ol|li|blockquote|em|strong)\b/.test(value)) {
+    return 'text';
   }
-  if (snippet && !snippet.includes('<img') && !snippet.includes('<video') && !snippet.includes('<svg')) {
-    return undefined;
+  return 'unknown';
+}
+
+/** Extract the image source from an HTML snippet, when present. */
+function urlFromSnippet(snippet: string | undefined): string | undefined {
+  if (!snippet) return undefined;
+  const match = /src\s*=\s*["']([^"']+)["']/i.exec(snippet);
+  return match?.[1];
+}
+
+/** Describe a Performance API LCP entry as `h1.headline`. */
+function describeEntryElement(entry: LCPEntry): string | undefined {
+  if (!entry.elementTag) return undefined;
+  const id = entry.elementId ? `#${entry.elementId}` : '';
+  const className = entry.elementClass
+    ? `.${entry.elementClass.trim().split(/\s+/).join('.')}`
+    : '';
+  return `${entry.elementTag}${id}${className}`;
+}
+
+/**
+ * Resolve the element that produced the LCP.
+ *
+ * The element is taken from the same source as the LCP value so the two never
+ * describe different navigations. The Performance API entry wins over the
+ * trace candidate: it is the final candidate, while the trace may only carry
+ * the first one that appeared after navigation.
+ */
+function resolveLcpElement(
+  ir: IRBundle,
+  valueSource: 'trace' | 'lighthouse' | 'mixed',
+): { kind: LcpElementKind; element?: LCPBreakdown['lcpElement']; urlHint?: string } {
+  const entry = ir.performance.lcpEntry;
+  const candidate = ir.performance.lcpCandidate;
+  const lhSelector = ir.lighthouse.lcpElementSelector;
+  const lhSnippet = ir.lighthouse.lcpElementSnippet;
+  const lhNodeLabel = ir.lighthouse.lcpElementNodeLabel;
+
+  const entryElement: LCPBreakdown['lcpElement'] = entry
+    ? {
+        selector: describeEntryElement(entry),
+        nodeLabel: describeEntryElement(entry),
+        source: 'performance-api',
+        type: entry.url ? 'image' : 'text',
+      }
+    : undefined;
+
+  const lighthouseElement: LCPBreakdown['lcpElement'] = lhSelector
+    ? {
+        selector: lhSelector,
+        snippet: lhSnippet,
+        nodeLabel: lhNodeLabel,
+        source: 'lighthouse',
+      }
+    : undefined;
+
+  const traceElement: LCPBreakdown['lcpElement'] = candidate
+    ? {
+        nodeLabel: candidate.nodeName,
+        source: 'trace',
+        type: candidate.type,
+      }
+    : undefined;
+
+  const preferLighthouse = valueSource === 'lighthouse';
+  const ordered = preferLighthouse
+    ? [lighthouseElement, entryElement, traceElement]
+    : [entryElement, traceElement, lighthouseElement];
+
+  for (const element of ordered) {
+    if (!element) continue;
+    if (element.source === 'lighthouse') {
+      const kind = classifyElement(
+        `${lhNodeLabel ?? ''} ${lhSnippet ?? ''} ${lhSelector ?? ''}`,
+      );
+      return {
+        kind,
+        element: { ...element, type: kind },
+        urlHint: urlFromSnippet(lhSnippet),
+      };
+    }
+    if (element.source === 'performance-api') {
+      return { kind: entry?.url ? 'image' : 'text', element, urlHint: entry?.url };
+    }
+    return { kind: candidate?.type ?? 'unknown', element, urlHint: candidate?.url };
   }
-  if (selector && /(^|\s|[#.])(?:p|h[1-6]|div|span|section|article)(\s|$)/.test(selector)) {
-    return undefined;
-  }
-  const images = requests.filter((r) => r.resourceType === 'Image' && !r.failed);
+
+  return { kind: 'unknown' };
+}
+
+/**
+ * Find the network resource that the LCP element loaded, if any.
+ *
+ * A text LCP has no resource. An image LCP is matched by URL when the element
+ * is known; only when the element is known to be an image but its URL is not
+ * is the largest image used as a fallback. When the element kind is unknown
+ * nothing is attributed — guessing would report an icon as the LCP.
+ */
+function findLcpResource(
+  ir: IRBundle,
+  kind: LcpElementKind,
+  urlHint: string | undefined,
+): NormalizedRequest | undefined {
+  if (kind === 'text') return undefined;
+
+  const images = ir.network.requests.filter(
+    (r) => r.resourceType === 'Image' && !r.failed && !isFavicon(r.url),
+  );
   if (images.length === 0) return undefined;
-  return images.reduce((a, b) => (a.bytes >= b.bytes ? a : b));
+
+  if (urlHint) {
+    const hint = urlHint.toLowerCase();
+    const exact = images.find((r) => r.url.toLowerCase() === hint);
+    if (exact) return exact;
+    const byPath = images.find(
+      (r) => r.url.toLowerCase().endsWith(hint) || hint.endsWith(r.url.toLowerCase()),
+    );
+    if (byPath) return byPath;
+  }
+
+  if (kind !== 'image') return undefined;
+
+  const sized = images.filter((r) => (r.bytes ?? 0) > 0);
+  if (sized.length === 0) return undefined;
+  return sized.reduce((a, b) => ((b.bytes ?? 0) > (a.bytes ?? 0) ? b : a));
 }
 
 /**
@@ -95,18 +223,32 @@ export function extractLCPBreakdown(ir: IRBundle): LCPBreakdown | undefined {
     hasLighthouse ? 'lighthouse' : 'trace';
 
   const ttfb = extractTTFB(ir);
-  const lcpResource = findLcpResource(ir);
+  const { kind, element, urlHint } = resolveLcpElement(ir, source);
+  const lcpResource = findLcpResource(ir, kind, urlHint);
+  const entry = ir.performance.lcpEntry;
 
-  // Build lcpElement if Lighthouse provides selector info
-  const lcpElement = ir.lighthouse.lcpElementSelector
-    ? {
-        selector: ir.lighthouse.lcpElementSelector,
-        snippet: ir.lighthouse.lcpElementSnippet,
-        nodeLabel: ir.lighthouse.lcpElementNodeLabel,
-      }
-    : undefined;
+  // The Performance API reports the real load and render times of the LCP
+  // resource. When they are present the breakdown is measured, not inferred.
+  if (entry?.url && entry.loadTime !== undefined && entry.renderTime !== undefined) {
+    const resourceLoadDelay = clamp(entry.loadTime - ttfb);
+    const resourceLoadTime = clamp(entry.renderTime - entry.loadTime);
+    const elementRenderDelay = clamp(entry.startTime - entry.renderTime);
 
-  // Text-only LCP: no image resource to load
+    return {
+      ttfb,
+      resourceLoadDelay,
+      resourceLoadTime,
+      elementRenderDelay,
+      totalLCP,
+      lcpElementUrl: entry.url,
+      lcpResourceType: lcpResource?.resourceType ?? 'Image',
+      lcpElement: element,
+      source,
+    };
+  }
+
+  // No resource to attribute: the LCP element is text, or the element is
+  // unknown and attributing a resource would be a guess.
   if (!lcpResource) {
     return {
       ttfb,
@@ -116,7 +258,7 @@ export function extractLCPBreakdown(ir: IRBundle): LCPBreakdown | undefined {
       totalLCP,
       lcpElementUrl: undefined,
       lcpResourceType: undefined,
-      lcpElement,
+      lcpElement: element,
       source,
     };
   }
@@ -133,7 +275,7 @@ export function extractLCPBreakdown(ir: IRBundle): LCPBreakdown | undefined {
     totalLCP,
     lcpElementUrl: lcpResource.url,
     lcpResourceType: lcpResource.resourceType,
-    lcpElement,
+    lcpElement: element,
     source,
   };
 }

@@ -14,7 +14,7 @@
 
 import ow from 'ow';
 import type { Page } from 'playwright';
-import type { CollectorRunOptions, RunResult } from '../shared/types.js';
+import type { CollectorRunOptions, RunContext, RunResult } from '../shared/types.js';
 import { DEFAULT_RUN_OPTIONS } from '../shared/types.js';
 import { launchBrowserServer, closeBrowser } from './session.js';
 import { TraceCollector } from './trace.js';
@@ -25,6 +25,7 @@ import { CoverageCollector } from './coverage.js';
 import { ConsoleCollector } from './console.js';
 import { DOMCollector } from './dom.js';
 import { LighthouseCollector } from './lighthouse.js';
+import { captureLcpEntry, type LcpEntry } from './lcp.js';
 import { createOutputDir, writeJsonFile, writeWarnings } from '../output/writer.js';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -131,50 +132,18 @@ function enabledCollectors(defs: CollectorDef[], options: CollectorRunOptions): 
 const LCP_TIMEOUT_MS = 5_000;
 
 /**
- * Wait for LargestContentfulPaint to fire on the page.
+ * Wait for LargestContentfulPaint to settle and return the final entry.
  *
- * Uses a PerformanceObserver for 'largest-contentful-paint' with `buffered: true`
- * so that entries which already fired before the observer was created are still
- * captured. If the observer API is unavailable or the timeout expires, returns
- * false so the caller can record a warning but still proceed.
+ * The Performance API keeps every candidate, so the last entry is the real
+ * largest contentful paint. The trace alone is not enough: it may only carry
+ * the first candidate that appeared after navigation.
  *
  * @param page - Playwright Page to evaluate the observer in
  * @param timeoutMs - Maximum time to wait in milliseconds
- * @returns true if LCP was detected, false otherwise
+ * @returns The final LCP entry, or undefined when the page reported none
  */
-async function waitForLCP(page: Page, timeoutMs: number): Promise<boolean> {
-  try {
-    return await page.evaluate((timeout) => {
-      return new Promise<boolean>((resolve) => {
-        let resolved = false;
-
-        try {
-          const observer = new PerformanceObserver((list) => {
-            const entries = list.getEntries();
-            if (entries.length > 0) {
-              observer.disconnect();
-              resolved = true;
-              resolve(true);
-            }
-          });
-
-          observer.observe({ type: 'largest-contentful-paint', buffered: true });
-
-          setTimeout(() => {
-            if (!resolved) {
-              resolve(false);
-            }
-          }, timeout);
-        } catch {
-          // PerformanceObserver or LCP type not supported by this browser
-          resolve(false);
-        }
-      });
-    }, timeoutMs);
-  } catch {
-    // page.evaluate failed (CSP restrictions, page crash, etc.)
-    return false;
-  }
+async function waitForLCP(page: Page, timeoutMs: number): Promise<LcpEntry | undefined> {
+  return captureLcpEntry(page, timeoutMs);
 }
 
 // ---------------------------------------------------------------------------
@@ -210,7 +179,7 @@ async function runOnce(
   console.error(`[${runIndex}] Launching browser...`);
   const { browser, page, cdp, cdpPort } = await launchBrowserServer(30_000, options.mobile);
   const viewport = page.viewportSize();
-  (bundle as Record<string, unknown>).context = {
+  const runContext: RunContext = {
     browser: browser.version(),
     os: `${process.platform} ${process.arch}`,
     device: options.mobile ?? 'desktop',
@@ -223,6 +192,12 @@ async function runOnce(
     requestedRuns: options.runs,
     ownedDomains: options.ownedDomains,
   };
+  (bundle as Record<string, unknown>).context = runContext;
+
+  // Persist the environment next to the raw artifacts. The pipeline reloads
+  // the bundle from disk, so an in-memory-only context would be lost and the
+  // report would claim an unknown run environment.
+  files.push(await writeJsonFile(outputDir, 'context.json', runContext));
 
   try {
     // --- Phase 3: Determine which CDP collectors to run ---
@@ -248,8 +223,10 @@ async function runOnce(
       // This ensures the trace (and other collectors) capture the LargestContentfulPaint
       // event, which may fire after networkidle (e.g. large hero images, late fonts).
       console.error(`[${runIndex}] Waiting for LargestContentfulPaint...`);
-      const lcpReady = await waitForLCP(page, LCP_TIMEOUT_MS);
-      if (lcpReady) {
+      const lcpEntry = await waitForLCP(page, LCP_TIMEOUT_MS);
+      if (lcpEntry) {
+        (bundle as Record<string, unknown>).lcp = lcpEntry;
+        files.push(await writeJsonFile(outputDir, 'lcp.json', lcpEntry));
         console.error(`[${runIndex}] LargestContentfulPaint captured`);
       } else {
         const lcpWarning =

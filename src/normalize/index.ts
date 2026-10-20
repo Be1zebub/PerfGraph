@@ -42,6 +42,7 @@ export function normalize(raw: RawDataBundle): IRBundle {
         raw.trace as never,
         raw.performance as never,
         anchor,
+        raw.lcp,
       )
     : {
         navigation: {

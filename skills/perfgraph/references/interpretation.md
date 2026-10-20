@@ -49,6 +49,27 @@ Limitations: <warnings, missing collectors, confidence caveats>.
   data-quality inconsistency and avoid a confident performance verdict.
 - Lab and field values from different runs must retain source, timestamp, and
   context; never present one as a substitute for the other.
+- The LCP element is only reported when the browser identified it. A missing
+  `lcpElement` means the element is unknown, not that the page has no LCP.
+  Never substitute the largest downloaded image for the LCP element.
+- Two LCP numbers may appear: the PerfGraph lab value from the traced run and
+  the Lighthouse value from its own throttled run. Report each with its source
+  instead of merging them. `insights.metrics` is the lab run, `insights.lighthouse`
+  is the Lighthouse run.
+
+## LCP element and resource
+
+`insights.lcpElement` describes the element the browser reported:
+
+- `source`: `performance-api` (the browser's own LCP entry), `lighthouse`, or
+  `trace`;
+- `type`: `text` or `image`. A text LCP has no image resource, so image
+  recommendations do not apply to it;
+- `nodeLabel` / `selector`: the element itself.
+
+Only an image LCP has an `lcpElementUrl` and load timings. When the element is
+unknown, the LCP time is reported as a single render delay rather than split
+into a guessed resource delay.
 
 ## ASCII causal graph
 

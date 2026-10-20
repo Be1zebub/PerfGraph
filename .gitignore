@@ -11,7 +11,9 @@
 
 # Source & config (needed to build/test)
 !src/
+!src/**
 !test/
+!test/**
 !package.json
 !package-lock.json
 !tsconfig.json

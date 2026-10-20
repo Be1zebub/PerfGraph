@@ -186,36 +186,50 @@ export function buildReportMarkdown(
   // Lighthouse Insights
   // -----------------------------------------------------------------------
   if (insights?.lighthouse) {
-    lines.push('## Lighthouse Insights');
+    lines.push('## Metrics');
     lines.push('');
-    lines.push('| Metric | Value |');
-    lines.push('|--------|-------|');
+    lines.push('Lab values come from the PerfGraph run; Lighthouse values come from its own throttled run.');
+    lines.push('');
+    lines.push('| Metric | Lab | Lighthouse |');
+    lines.push('|--------|-----|------------|');
     if (insights.lighthouse.performance != null) {
       lines.push(
-        `| Performance | ${(insights.lighthouse.performance * 100).toFixed(0)} |`,
+        `| Performance | — | ${(insights.lighthouse.performance * 100).toFixed(0)} |`,
       );
     }
-    if (insights.lighthouse.lcpMs != null) {
-      lines.push(`| LCP | ${insights.lighthouse.lcpMs} ms |`);
-    }
-    if (insights.lighthouse.fcpMs != null) {
-      lines.push(`| FCP | ${insights.lighthouse.fcpMs} ms |`);
-    }
-    if (insights.lighthouse.cls != null) {
+    const labLcp = insights.metrics?.lcpMs;
+    if (labLcp != null || insights.lighthouse.lcpMs != null) {
       lines.push(
-        `| CLS | ${insights.lighthouse.cls.toFixed(3)} |`,
+        `| LCP | ${labLcp != null ? `${labLcp} ms` : '—'} | ${insights.lighthouse.lcpMs != null ? `${insights.lighthouse.lcpMs} ms` : '—'} |`,
       );
     }
-    if (insights.lighthouse.tbtMs != null) {
-      lines.push(`| TBT | ${insights.lighthouse.tbtMs} ms |`);
+    const labFcp = insights.metrics?.fcpMs;
+    if (labFcp != null || insights.lighthouse.fcpMs != null) {
+      lines.push(
+        `| FCP | ${labFcp != null ? `${labFcp} ms` : '—'} | ${insights.lighthouse.fcpMs != null ? `${insights.lighthouse.fcpMs} ms` : '—'} |`,
+      );
+    }
+    const labCls = insights.metrics?.cls;
+    if (labCls != null || insights.lighthouse.cls != null) {
+      lines.push(
+        `| CLS | ${labCls != null ? labCls.toFixed(3) : '—'} | ${insights.lighthouse.cls != null ? insights.lighthouse.cls.toFixed(3) : '—'} |`,
+      );
+    }
+    const labTbt = insights.metrics?.tbtMs;
+    if (labTbt != null || insights.lighthouse.tbtMs != null) {
+      lines.push(
+        `| TBT | ${labTbt != null ? `${labTbt} ms` : '—'} | ${insights.lighthouse.tbtMs != null ? `${insights.lighthouse.tbtMs} ms` : '—'} |`,
+      );
     }
     lines.push('');
 
     if (insights.lcpElement) {
-      lines.push(
-        `**LCP Element:** \`${insights.lcpElement.selector}\``,
-      );
-      lines.push('');
+      const label = insights.lcpElement.selector || insights.lcpElement.nodeLabel;
+      if (label) {
+        const kind = insights.lcpElement.type ? ` (${insights.lcpElement.type})` : '';
+        lines.push(`**LCP Element:** \`${label}\`${kind}`);
+        lines.push('');
+      }
     }
 
     if (insights.renderBlocking && insights.renderBlocking.length > 0) {

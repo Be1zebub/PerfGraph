@@ -66,6 +66,8 @@ export interface RunContext {
   headless: boolean;
   runIndex?: number;
   requestedRuns?: number;
+  /** Hostnames treated as first-party CDN for ownership classification */
+  ownedDomains?: string[];
 }
 
 /** Result of a single collection run */

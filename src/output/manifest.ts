@@ -129,31 +129,43 @@ const KNOWN_ARTIFACTS: ReadonlyArray<{
     readOrder: 13,
   },
   {
+    filename: 'lcp.json',
+    description:
+      'Final largest contentful paint entry from the Performance API: timestamp, element, and resource load timings',
+    readOrder: 14,
+  },
+  {
+    filename: 'context.json',
+    description:
+      'Run environment: browser, OS, device, viewport, throttling and owned domains',
+    readOrder: 15,
+  },
+  {
     filename: 'runtime.json',
     description: 'JS heap stats, execution contexts, event loop',
-    readOrder: 14,
+    readOrder: 16,
   },
   {
     filename: 'console.json',
     description: 'Captured console log entries',
-    readOrder: 15,
+    readOrder: 17,
   },
   {
     filename: 'dom.json',
     description: 'DOM snapshot and statistics',
-    readOrder: 16,
+    readOrder: 18,
   },
   {
     filename: 'warnings.json',
     description:
       'Collection warnings (missing data, incomplete traces)',
-    readOrder: 17,
+    readOrder: 19,
   },
   {
     filename: 'runs-summary.json',
     description:
       'Summary across multiple collection runs with per-metric variance (only when --runs > 1)',
-    readOrder: 18,
+    readOrder: 20,
   },
 ];
 
