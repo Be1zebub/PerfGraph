@@ -14,6 +14,9 @@ export interface DataQuality {
   warnings: string[];
 }
 
+/** Above this a blocking time is an artifact of the run, not a measurement */
+const TBT_SANE_MAX = 60_000; // 60 seconds
+
 /**
  * Assess the quality of a run.
  *
@@ -34,11 +37,13 @@ export function assessDataQuality(
 ): DataQuality {
   const warnings: string[] = [];
 
+  const labTbt = measuredTbt(features.mainThreadBlocking?.tbtMs);
+
   if (features.lcpBreakdown == null) warnings.push('LCP breakdown is unavailable.');
   if (features.layoutShifts == null) warnings.push('Layout-shift data is unavailable.');
   if (features.mainThreadBlocking == null) {
     warnings.push('Main-thread data is unavailable.');
-  } else if (options.tbtMs == null) {
+  } else if (labTbt == null) {
     warnings.push(
       'Measured TBT is unavailable; busyMs is not used as a TBT substitute.',
     );
@@ -66,14 +71,8 @@ export function assessDataQuality(
   // The two runs measure the same page under different conditions. A large
   // gap between their blocking times is worth naming, otherwise the two
   // numbers look like a contradiction instead of two measurements.
-  const labTbt = features.mainThreadBlocking?.tbtMs;
   const lighthouseTbt = options.lighthouseTbtMs;
-  if (
-    labTbt != null &&
-    lighthouseTbt != null &&
-    labTbt > 0 &&
-    lighthouseTbt > 0
-  ) {
+  if (labTbt != null && lighthouseTbt != null && labTbt > 0 && lighthouseTbt > 0) {
     const ratio = Math.max(labTbt, lighthouseTbt) / Math.min(labTbt, lighthouseTbt);
     if (ratio >= 2) {
       warnings.push(
@@ -86,4 +85,15 @@ export function assessDataQuality(
     status: warnings.length > 0 ? 'partial' : 'complete',
     warnings,
   };
+}
+
+/**
+ * A blocking time that is not a measurement.
+ *
+ * A headless run can report a blocking time of 151 seconds because of the
+ * tracing overhead; such a value says nothing about the page.
+ */
+function measuredTbt(value: number | undefined): number | undefined {
+  if (value === undefined || !Number.isFinite(value)) return undefined;
+  return value >= 0 && value <= TBT_SANE_MAX ? value : undefined;
 }
