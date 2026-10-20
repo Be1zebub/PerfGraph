@@ -54,6 +54,35 @@ export class ConsoleCollector implements Collector {
 
       this.entries.push(entry);
     });
+
+    // Uncaught exceptions never reach consoleAPICalled, so a page can fail
+    // with errors the report never sees.
+    session.on('Runtime.exceptionThrown', (event: {
+      timestamp: number;
+      exceptionDetails?: {
+        text?: string;
+        exception?: { description?: string; value?: unknown };
+        stackTrace?: { callFrames: Array<{ url: string; lineNumber: number; columnNumber: number; functionName?: string }> };
+      };
+    }) => {
+      const details = event.exceptionDetails;
+      const description = details?.exception?.description;
+      const text = details?.text ?? (typeof description === 'string' ? description : undefined);
+
+      const entry: ConsoleRawData['entries'][number] = {
+        timestamp: event.timestamp * 1000,
+        type: 'error',
+        args: [text ?? 'Uncaught exception'],
+        stackTrace: details?.stackTrace?.callFrames?.map((f) => ({
+          url: f.url,
+          lineNumber: f.lineNumber,
+          columnNumber: f.columnNumber,
+          functionName: f.functionName,
+        })),
+      };
+
+      this.entries.push(entry);
+    });
   }
 
   /**

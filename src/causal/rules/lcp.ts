@@ -47,6 +47,17 @@ function severityFromDelta(
   return undefined;
 }
 
+/**
+ * Label of the LCP impact node.
+ *
+ * A chain must not claim the LCP is increased when the measured value is
+ * within the threshold: the node is context for the chain, not a finding.
+ */
+function lcpImpactLabel(totalLCP: number | undefined): string {
+  if (totalLCP === undefined) return 'LCP';
+  return totalLCP > LCP_WARN ? 'Increased LCP' : `LCP within threshold (${Math.round(totalLCP)}ms)`;
+}
+
 // ---------------------------------------------------------------------------
 // Rule 1: TTFB → LCP chain
 // ---------------------------------------------------------------------------
@@ -111,7 +122,7 @@ export const ttfbLcpChain = {
       },
       {
         id: 'increased-lcp',
-        label: 'Increased LCP',
+        label: lcpImpactLabel(features.lcpBreakdown?.totalLCP),
         type: 'impact',
         // The severity of the impact follows the LCP itself, not the TTFB that
         // triggered the chain. A chain must not turn a healthy LCP into a
@@ -237,7 +248,7 @@ export const renderBlockingLcpChain = {
       },
       {
         id: 'increased-lcp-rb',
-        label: 'Increased LCP',
+        label: lcpImpactLabel(features.lcpBreakdown?.totalLCP),
         type: 'impact',
         value: features.lcpBreakdown?.totalLCP,
         unit: 'ms',
@@ -304,7 +315,7 @@ export const lcpResourceDelayChain = {
       },
       {
         id: 'increased-lcp-resource',
-        label: 'Increased LCP',
+        label: lcpImpactLabel(lcp.totalLCP),
         type: 'impact',
         value: lcp.totalLCP,
         unit: 'ms',

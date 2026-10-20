@@ -146,7 +146,8 @@ function safeNumber(value: unknown): number | undefined {
 
 function buildDataQuality(
   features: FeatureSet,
-  tbtMs?: number,
+  tbtMs: number | undefined,
+  lighthouseTbt: number | undefined,
   runWarnings?: string[],
 ): Insights['dataQuality'] {
   const warnings: string[] = [];
@@ -167,6 +168,18 @@ function buildDataQuality(
   // A run that recorded a warning did not produce complete data.
   for (const warning of runWarnings ?? []) {
     if (!warnings.includes(warning)) warnings.push(warning);
+  }
+  // The two runs measure the same page under different conditions. A large
+  // gap between their TBT values is worth naming, otherwise the two numbers
+  // look like a contradiction instead of two measurements.
+  const labTbt = features.mainThreadBlocking?.tbtMs;
+  if (labTbt != null && lighthouseTbt != null && labTbt > 0 && lighthouseTbt > 0) {
+    const ratio = Math.max(labTbt, lighthouseTbt) / Math.min(labTbt, lighthouseTbt);
+    if (ratio >= 2) {
+      warnings.push(
+        `Total blocking time differs by ${ratio.toFixed(1)}x between the lab run (${Math.round(labTbt)}ms) and the Lighthouse run (${Math.round(lighthouseTbt)}ms); they are different navigations under different conditions.`,
+      );
+    }
   }
   return {
     status: warnings.length > 0 ? 'partial' : 'complete',
@@ -696,7 +709,7 @@ export function buildInsights(
         }
       : undefined,
     warnings,
-    dataQuality: buildDataQuality(features, tbtMs, runWarnings),
+    dataQuality: buildDataQuality(features, tbtMs, tbtAuditSane, runWarnings),
     topRecommendations,
   };
 }
