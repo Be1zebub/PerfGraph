@@ -212,17 +212,26 @@ function buildLcpElement(
 
   if (!selector && !nodeLabel) return undefined;
 
-  return {
-    selector,
-    snippet: lb?.lcpElementSnippet ?? featureElement?.snippet,
-    nodeLabel,
-    source: lb?.lcpElementSelector ? 'lighthouse' : featureElement?.source,
-    type: featureElement?.type,
-    renderDelayMs: lb?.elementRenderDelay,
-    resourceLoadDelayMs: features.lcpBreakdown?.resourceLoadDelay,
-    resourceLoadTimeMs: features.lcpBreakdown?.resourceLoadTime,
-    ttfbMs: lb?.timeToFirstByte,
-  };
+  // Only include the fields that carry a value: the agent-facing artifact is
+  // read as text, and empty keys read like missing measurements.
+  const element: NonNullable<Insights['lcpElement']> = { selector };
+  const snippet = lb?.lcpElementSnippet ?? featureElement?.snippet;
+  if (snippet !== undefined) element.snippet = snippet;
+  if (nodeLabel !== undefined) element.nodeLabel = nodeLabel;
+  const source = lb?.lcpElementSelector ? 'lighthouse' : featureElement?.source;
+  if (source !== undefined) element.source = source;
+  const type = featureElement?.type;
+  if (type !== undefined) element.type = type;
+  if (lb?.elementRenderDelay !== undefined) element.renderDelayMs = lb.elementRenderDelay;
+  if (features.lcpBreakdown?.resourceLoadDelay !== undefined) {
+    element.resourceLoadDelayMs = features.lcpBreakdown.resourceLoadDelay;
+  }
+  if (features.lcpBreakdown?.resourceLoadTime !== undefined) {
+    element.resourceLoadTimeMs = features.lcpBreakdown.resourceLoadTime;
+  }
+  if (lb?.timeToFirstByte !== undefined) element.ttfbMs = lb.timeToFirstByte;
+
+  return element;
 }
 
 /** Build renderBlocking array from Lighthouse insights. */
@@ -517,14 +526,17 @@ export function buildInsights(
   // wildly inflated (e.g. 151s) due to CDP overhead or browser throttling;
   // treat values above the cap as unavailable instead of substituting busyMs.
   const TBT_SANE_MAX = 60_000; // 60 seconds — anything above is an artifact
-  const tbtMs =
+  const tbtAuditSane =
     tbtAudit !== undefined && tbtAudit >= 0 && tbtAudit <= TBT_SANE_MAX
       ? tbtAudit
-      : features.mainThreadBlocking?.tbtMs !== undefined &&
-          features.mainThreadBlocking.tbtMs >= 0 &&
-          features.mainThreadBlocking.tbtMs <= TBT_SANE_MAX
-        ? features.mainThreadBlocking.tbtMs
-        : undefined;
+      : undefined;
+  const tbtMs =
+    tbtAuditSane ??
+    (features.mainThreadBlocking?.tbtMs !== undefined &&
+    features.mainThreadBlocking.tbtMs >= 0 &&
+    features.mainThreadBlocking.tbtMs <= TBT_SANE_MAX
+      ? features.mainThreadBlocking.tbtMs
+      : undefined);
 
   // 5. LCP element
   const lcpElement = buildLcpElement(lighthouseInsights, features);
@@ -569,8 +581,8 @@ export function buildInsights(
       lcpMs: lcpAuditMs,
       fcpMs: fcpAuditMs,
       cls: clsAudit,
-      tbtMs: tbtAudit,
-      tbtStatus: tbtAudit != null ? 'measured' : 'unavailable',
+      tbtMs: tbtAuditSane,
+      tbtStatus: tbtAuditSane != null ? 'measured' : 'unavailable',
     },
     lcpElement,
     renderBlocking,
