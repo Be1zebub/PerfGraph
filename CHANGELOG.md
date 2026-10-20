@@ -53,6 +53,11 @@ the only runtime interface, and the agent-facing layer is a skill.
   and Total Blocking Time counts the main thread only
 - the run environment and the collection warnings reach the report
 - the report and the insights judge the quality of the data the same way
+- the render-blocking resources carry their priority and their initiator, so a
+  stylesheet a script injected as a non-blocking preload can be told apart
+  from one that really blocks the render
+- the run summary reports the spread of the lab run, which is the run the
+  report describes, and the spread of the Lighthouse runs separately
 - the assets of a site are no longer counted as third-party traffic when they
   belong to the same organisation, such as gstatic.com for a Google site
 - a URL without a scheme is accepted, and a failed run prints its message
