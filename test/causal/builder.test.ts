@@ -16,6 +16,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildCausalGraph } from '../../src/causal/builder.js';
 import { CausalGraphSchema } from '../../src/causal/types.js';
+import { buildReport } from '../../src/report/analyzer.js';
 import type { FeatureSet } from '../../src/extract/types.js';
 
 // ---------------------------------------------------------------------------
@@ -107,6 +108,30 @@ describe('buildCausalGraph', () => {
     expect(node!.basis).toBe('observed');
     expect(node!.evidence?.metric?.source).toBe('lighthouse');
     expect(node!.evidence?.urls).toEqual(['https://example.com/app.js:1:4220']);
+  });
+
+  it('gives a measured node the confidence of the measurement', () => {
+    const features = baseFeatures({
+      lighthouseFindings: [
+        {
+          id: 'forced-reflow',
+          title: 'Forced reflow',
+          value: 197,
+          unit: 'ms',
+          auditScore: 0,
+          warnAt: 50,
+          critAt: 200,
+        },
+      ],
+    });
+    const graph = buildCausalGraph(features);
+    const report = buildReport(graph, features);
+
+    const issue = report.issues.find((i) => i.id === 'lh-forced-reflow');
+    expect(issue).toBeDefined();
+    // The node starts its chain, so there is no incoming edge to take the
+    // confidence from — but the value is a measurement.
+    expect(issue!.confidence).toBe('strong');
   });
 
   it('leaves out a Lighthouse finding below its threshold', () => {

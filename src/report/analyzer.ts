@@ -309,7 +309,12 @@ export function buildReport(
     // Determine the rule ID for remediation lookup
     const incomingEdge = graph.edges.find((e) => e.target === node.id);
     const ruleId = incomingEdge?.ruleId;
-    const confidence = nodeInConfidence.get(node.id) ?? 'weak';
+    // A node that starts a chain has no incoming edge to take the confidence
+    // from. When it carries a measurement, the confidence is the strength of
+    // that measurement, not the strength of an inferred relation.
+    const confidence =
+      nodeInConfidence.get(node.id) ??
+      (node.basis === 'observed' && node.evidence ? 'strong' : 'weak');
 
     // A node that carries a threshold is only an issue when it exceeds that
     // threshold. Otherwise it is context for the chain, not a finding — the
