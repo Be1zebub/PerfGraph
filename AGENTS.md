@@ -44,6 +44,10 @@ Read `manifest.toon`, then `insights.toon`, then `report.toon`. Read
 `graph.toon` and raw `trace.json`, `network.json`, or `lighthouse.json` only for
 targeted deep dives. `.toon` files are text, not JSON.
 
+`insights.toon` holds two metric blocks: `metrics` from the PerfGraph run and
+`lighthouse` from Lighthouse's own navigation. They are different runs — cite
+each value with its source and never merge them.
+
 The response should contain a short status, the 1–3 main causal chains as an
 ASCII graph, 3–5 prioritized actions, evidence/confidence, warnings, and a
 repeat-measurement plan. Do not treat `Possible INP delay` as measured INP or
@@ -54,11 +58,15 @@ the complete interpretation workflow.
 
 | Category | What it detects |
 |----------|----------------|
-| LCP | Large Contentful Paint, TTFB, render-blocking resources |
+| LCP | Large Contentful Paint, TTFB, render-blocking resources, the LCP element itself |
 | JavaScript | Long tasks, Total Blocking Time, heavy execution, unused code |
-| Network | Request chains, bandwidth bottlenecks, waterfall depth |
+| Network | Request chains, bandwidth bottlenecks, waterfall depth, document chains |
 | Layout | Layout shifts (CLS), DOM size, forced reflows |
 | Third-party | Overhead from embedded scripts, tracking pixels, widgets |
+
+Every issue and chain node carries `basis` (`observed` or `inferred`) and
+`findingStatus`. A rule that inferred a relationship is not a measurement, and
+the response has to say so.
 
 ## Development commands
 
