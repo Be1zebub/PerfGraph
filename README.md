@@ -319,9 +319,14 @@ is printed as JSON on stdout. Key sections:
 | --------------- | ----------------------------------------------------------------------------------- |
 | **LCP**         | Slow LCP, high TTFB, render-blocking resources, LCP resource delay chains           |
 | **JavaScript**  | Long tasks, high TBT, heavy execution, unused code, main-thread bottlenecks         |
-| **Network**     | Deep request chains, bandwidth bottlenecks, waterfall depth, critical path analysis |
+| **Network**     | Deep request chains, bandwidth bottlenecks, waterfall depth, document chains         |
 | **Layout**      | Layout shifts (CLS), large DOM size, forced reflows                                 |
 | **Third-party** | Third-party script overhead, tracking pixels, embedded widget impact                |
+| **Lighthouse**  | Forced reflows with the source, oversized images, uncached bytes, duplicated and legacy JavaScript, blocking fonts |
+
+The Lighthouse insight audits become findings of their own, carrying the
+value Lighthouse measured. They are marked as coming from the Lighthouse run,
+not from the traced one.
 
 ## Architecture
 
