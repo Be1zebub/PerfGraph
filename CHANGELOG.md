@@ -25,6 +25,8 @@ the only runtime interface, and the agent-facing layer is a skill.
 - `criticalPath.documentChain` reports a page that loaded more than one
   document, with the server time spent on a response nobody used and when
   the content the visitor saw arrived.
+- `insights.documentResponse` carries the headers of the document the
+  visitor received — cache status, cache-control, content encoding, alt-svc.
 - `insights.lighthouse.failedAudits` lists the Lighthouse audits that did not
   pass, with their values.
 
