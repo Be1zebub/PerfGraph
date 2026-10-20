@@ -4,6 +4,7 @@
  * Chains covered:
  *   1. Deep critical chain → delayed page load
  *   2. Excessive request count → bandwidth contention → slower loads
+ *   3. Document chain → discarded document → delayed page load
  *
  * @packageDocumentation
  */
@@ -19,6 +20,7 @@ const CHAIN_DEPTH_WARN = 5;
 const CHAIN_DEPTH_CRIT = 10;
 const REQUEST_COUNT_WARN = 50;
 const REQUEST_COUNT_CRIT = 100;
+const REDIRECT_COST_WARN = 100; // ms spent on a document that was discarded
 
 // ---------------------------------------------------------------------------
 // Rule 1: Deep critical chain → slow page load
@@ -153,10 +155,94 @@ export const excessiveRequestsChain = {
 };
 
 // ---------------------------------------------------------------------------
+// Rule 3: Document chain → discarded document
+// ---------------------------------------------------------------------------
+
+export const documentChainRule = {
+  id: 'net-document-chain-chain',
+  label: 'Document chain → discarded document → delayed page load',
+
+  applies(features: FeatureSet): boolean {
+    const chain = features.criticalPath?.documentChain;
+    return chain != null && chain.count > 1 && chain.discardedMs >= REDIRECT_COST_WARN;
+  },
+
+  build(features: FeatureSet): { nodes: CausalNode[]; edges: CausalEdge[] } {
+    const chain = features.criticalPath!.documentChain!;
+    const isHeavy = chain.discardedMs >= 1000;
+
+    const evidence: Evidence = {
+      urls: chain.urls,
+      metric: {
+        name: 'Time spent on discarded documents',
+        value: Math.round(chain.discardedMs),
+        unit: 'ms',
+        source: 'network',
+        method: 'Duration of the document responses the browser navigated away from',
+      },
+    };
+
+    const nodes: CausalNode[] = [
+      {
+        id: 'document-chain',
+        label: `${chain.count} document responses`,
+        type: 'metric',
+        severity: isHeavy ? 'critical' : 'warning',
+        value: chain.count,
+        unit: 'count',
+        threshold: 1,
+        impactSurface: 'initial-viewport',
+        evidence,
+      },
+      {
+        id: 'discarded-document',
+        label: `Discarded document (${Math.round(chain.discardedMs)}ms)`,
+        type: 'bottleneck',
+        severity: isHeavy ? 'critical' : 'warning',
+        value: Math.round(chain.discardedMs),
+        unit: 'ms',
+        threshold: REDIRECT_COST_WARN,
+        impactSurface: 'initial-viewport',
+        evidence,
+      },
+      {
+        id: 'delayed-by-document-chain',
+        label: 'Page load delayed by the document chain',
+        type: 'impact',
+        severity: isHeavy ? 'critical' : 'warning',
+        impactSurface: 'initial-viewport',
+      },
+    ];
+
+    const edges: CausalEdge[] = [
+      {
+        source: 'document-chain',
+        target: 'discarded-document',
+        confidence: 'strong',
+        label: 'The browser navigated away from a document it had already received',
+        ruleId: 'net-document-chain-chain',
+        evidence,
+      },
+      {
+        source: 'discarded-document',
+        target: 'delayed-by-document-chain',
+        confidence: 'strong',
+        label: 'Time spent on the discarded document delays the content the user sees',
+        ruleId: 'net-document-chain-chain',
+        evidence,
+      },
+    ];
+
+    return { nodes, edges };
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Aggregated
 // ---------------------------------------------------------------------------
 
 export const networkRules = [
   criticalPathChain,
   excessiveRequestsChain,
+  documentChainRule,
 ];

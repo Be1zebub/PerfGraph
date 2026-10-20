@@ -32,25 +32,6 @@ function getArg(args: Record<string, unknown>, path: string[]): unknown {
   return current;
 }
 
-/** Trace event names the PerformanceIR builder cares about */
-const EVENT_NAMES = new Set([
-  'firstContentfulPaint',
-  'largestContentfulPaint::Candidate',
-  'MarkDOMContent',
-  'MarkLoad',
-  'LayoutShift',
-  'LongTask',
-]);
-
-/**
- * Chrome has shipped the LCP trace event under two spellings. Accept both so
- * the trace LCP is not silently dropped on one of them.
- */
-const LCP_CANDIDATE_EVENTS = new Set([
-  'largestContentfulPaint::Candidate',
-  'LargestContentfulPaint::Candidate',
-]);
-
 // ---------------------------------------------------------------------------
 // Navigation builder
 // ---------------------------------------------------------------------------
@@ -415,13 +396,6 @@ export function buildPerformanceIR(
   lcp?: LCPEntry,
 ): PerformanceIR {
   const events = trace.events ?? [];
-  const eventCount = events.length;
-
-  // Extract performance metrics as a lookup map
-  const metrics = new Map<string, number>();
-  for (const m of perf.metrics ?? []) {
-    metrics.set(m.name, m.value);
-  }
 
   const navigation = buildNavigation(events, anchor);
   const mainThreadKey = findMainThreadKey(events);

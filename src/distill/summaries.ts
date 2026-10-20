@@ -31,7 +31,12 @@ export interface NetworkSummary {
     bytes: number;
   }>;
   blockingResources: Array<{ url: string; resourceType: string }>;
-  initiatorChains: Array<{ url: string; depth: number }>;
+  /** What triggered each request — the dependency edges of the load */
+  initiatorChains: Array<{
+    url: string;
+    initiatorUrl?: string;
+    initiatorType?: string;
+  }>;
 }
 
 export interface LighthouseSummary {
@@ -124,7 +129,15 @@ export function buildNetworkSummary(network: NetworkRawData): NetworkSummary {
         url: r.url,
         resourceType: r.type ?? 'unknown',
       })),
-    initiatorChains: [], // Placeholder — real initiator chain data from IR
+    initiatorChains: requests
+      .filter((r) => r.initiator?.url || (r.initiator?.type && r.initiator.type !== 'other'))
+      .slice(0, 40)
+      .map((r) => {
+        const chain: NetworkSummary['initiatorChains'][number] = { url: r.url };
+        if (r.initiator?.url) chain.initiatorUrl = r.initiator.url;
+        if (r.initiator?.type) chain.initiatorType = r.initiator.type;
+        return chain;
+      }),
   };
 }
 

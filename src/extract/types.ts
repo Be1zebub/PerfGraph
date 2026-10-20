@@ -46,6 +46,20 @@ export const LCPBreakdownSchema = z.object({
 // Critical Path Length (FEA-03)
 // ---------------------------------------------------------------------------
 
+export const CriticalPathFeatureNodeSchema: z.ZodType<CriticalPathFeatureNode> = z.lazy(() =>
+  z.object({
+    url: z.string(),
+    durationMs: z.number().optional(),
+    children: z.array(CriticalPathFeatureNodeSchema).optional(),
+  }),
+);
+
+export interface CriticalPathFeatureNode {
+  url: string;
+  durationMs?: number;
+  children?: CriticalPathFeatureNode[];
+}
+
 export const CriticalPathSchema = z.object({
   /** Sum of durations for all matched requests in the dependency tree. */
   totalChainLength: z.number(),
@@ -62,6 +76,32 @@ export const CriticalPathSchema = z.object({
   longestSingleRequest: z.number(),
   /** URLs on the longest critical path chain */
   urlsOnLongestPath: z.array(z.string()).optional(),
+  /**
+   * The dependency tree of the critical path.
+   *
+   * This is the tree PerfGraph built from the request initiators, so it is
+   * available even when the Lighthouse trace engine failed.
+   */
+  tree: CriticalPathFeatureNodeSchema.optional(),
+  /**
+   * The document responses the browser loaded.
+   *
+   * More than one means the page navigated away from a document it had
+   * already received: a redirect or a client-side route change. The time
+   * spent on the discarded documents is time the user waited for nothing.
+   */
+  documentChain: z
+    .object({
+      /** Number of document responses, including the final one */
+      count: z.number(),
+      /** URLs in load order */
+      urls: z.array(z.string()),
+      /** Time spent on the documents that were discarded */
+      discardedMs: z.number(),
+      /** Time from the first document request to the last one */
+      chainMs: z.number(),
+    })
+    .optional(),
 });
 
 // ---------------------------------------------------------------------------

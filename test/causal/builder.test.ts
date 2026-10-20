@@ -83,6 +83,37 @@ function baseFeatures(overrides?: Partial<FeatureSet>): FeatureSet {
 // ---------------------------------------------------------------------------
 
 describe('buildCausalGraph', () => {
+  it('builds a chain for a document that was discarded', () => {
+    const features = baseFeatures({
+      criticalPath: {
+        totalChainLength: 1000,
+        elapsedCriticalPathMs: 900,
+        aggregateRequestDurationMs: 1000,
+        requestCount: 10,
+        blockingCount: 2,
+        nonBlockingCount: 8,
+        deepestChainDepth: 3,
+        longestSingleRequest: 450,
+        documentChain: {
+          count: 2,
+          urls: ['https://example.com/', 'https://example.com/ru'],
+          discardedMs: 890,
+          chainMs: 1200,
+        },
+      },
+    });
+    const graph = buildCausalGraph(features);
+
+    const discarded = graph.nodes.find((n) => n.id === 'discarded-document');
+    expect(discarded).toBeDefined();
+    expect(discarded!.value).toBe(890);
+    expect(discarded!.severity).toBe('warning');
+    expect(discarded!.evidence?.urls).toEqual([
+      'https://example.com/',
+      'https://example.com/ru',
+    ]);
+  });
+
   it('builds the TBT chain from a measured TBT even when the busy ratio is low', () => {
     const features = baseFeatures({
       mainThreadBlocking: {
@@ -115,7 +146,7 @@ describe('buildCausalGraph', () => {
     expect(graph.metadata.hasCycle).toBe(false);
 
     // Metadata has correct rule count
-    expect(graph.metadata.ruleCount).toBe(10); // 3 LCP + 2 network + 3 JS + 2 layout
+    expect(graph.metadata.ruleCount).toBe(11); // 3 LCP + 3 network + 3 JS + 2 layout
     expect(graph.metadata.totalNodes).toBeGreaterThanOrEqual(0);
     expect(graph.metadata.totalEdges).toBeGreaterThanOrEqual(0);
   });

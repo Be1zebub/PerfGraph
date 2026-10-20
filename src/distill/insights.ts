@@ -78,6 +78,20 @@ export interface Insights {
     cls?: number;
     tbtMs?: number;
     tbtStatus?: 'measured' | 'unavailable';
+    /**
+     * The Lighthouse audits that did not pass.
+     *
+     * They carry findings the causal rules do not know about — forced
+     * reflows, main-thread work, redirects — and they are the only place
+     * where those appear without opening the raw Lighthouse result.
+     */
+    failedAudits?: Array<{
+      id: string;
+      title: string;
+      score?: number;
+      numericValue?: number;
+      displayValue?: string;
+    }>;
   };
   lcpElement?: {
     selector?: string;
@@ -116,6 +130,13 @@ export interface Insights {
     aggregateRequestDurationMs?: number;
     pageLifecycleMs?: number;
     tree?: CriticalPathNode;
+    /** Document responses the browser loaded — more than one means a redirect */
+    documentChain?: {
+      count: number;
+      urls: string[];
+      discardedMs: number;
+      chainMs: number;
+    };
   };
   warnings: string[];
   dataQuality?: {
@@ -194,8 +215,43 @@ function getLHRRoot(raw: unknown): Record<string, unknown> {
   return raw;
 }
 
-/** Extract numericValue from a Lighthouse audit by ID. */
-function getAuditNumericValue(
+/**
+ * Collect the Lighthouse audits that did not pass.
+ *
+ * The insight audits carry findings the causal rules cannot derive: forced
+ * reflows, main-thread work, redirects, console errors. They are listed with
+ * their values so an agent sees them without opening the raw result.
+ */
+function collectFailedAudits(
+  lhr: Record<string, unknown>,
+): NonNullable<Insights['lighthouse']['failedAudits']> | undefined {
+  const audits = isRecord(lhr.audits) ? lhr.audits : {};
+  const failed: NonNullable<Insights['lighthouse']['failedAudits']> = [];
+
+  for (const [id, value] of Object.entries(audits)) {
+    if (!isRecord(value)) continue;
+    const score = typeof value.score === 'number' ? value.score : undefined;
+    const displayMode = typeof value.scoreDisplayMode === 'string' ? value.scoreDisplayMode : undefined;
+    // A score of null means the audit did not run; an errored audit has no
+    // usable value either.
+    if (score === undefined || score >= 1 || displayMode === 'error' || displayMode === 'notApplicable') {
+      continue;
+    }
+    const audit: NonNullable<Insights['lighthouse']['failedAudits']>[number] = {
+      id,
+      title: typeof value.title === 'string' ? value.title : id,
+      score,
+    };
+    if (typeof value.numericValue === 'number') audit.numericValue = value.numericValue;
+    if (typeof value.displayValue === 'string') audit.displayValue = value.displayValue;
+    failed.push(audit);
+  }
+
+  if (failed.length === 0) return undefined;
+  return failed;
+}
+
+/** Extract numericValue from a Lighthouse audit by ID. */function getAuditNumericValue(
   lhr: Record<string, unknown>,
   auditId: string,
 ): number | undefined {
@@ -354,14 +410,41 @@ function buildCriticalPath(
     }
   }
 
+  // The tree PerfGraph built from the request initiators is available even
+  // when the Lighthouse trace engine failed to produce one.
+  if (!tree && cp?.tree) {
+    tree = convertFeatureTree(cp.tree);
+  }
+
   return {
     depth: cp?.deepestChainDepth ?? 0,
     longestChainMs: cp?.elapsedCriticalPathMs ?? ndt?.longestChainDuration ?? cp?.longestSingleRequest,
     elapsedCriticalPathMs: cp?.elapsedCriticalPathMs,
     aggregateRequestDurationMs: cp?.aggregateRequestDurationMs,
     pageLifecycleMs: cp?.pageLifecycleMs,
+    documentChain: cp?.documentChain,
     tree,
   };
+}
+
+/** Convert the feature dependency tree into the insights tree shape. */
+function convertFeatureTree(node: {
+  url: string;
+  durationMs?: number;
+  children?: Array<{
+    url: string;
+    durationMs?: number;
+    children?: Array<{ url: string; durationMs?: number; children?: unknown[] }>;
+  }>;
+}): CriticalPathNode {
+  const converted: CriticalPathNode = { url: node.url };
+  if (node.durationMs !== undefined) converted.durationMs = node.durationMs;
+  if (node.children?.length) {
+    converted.children = node.children.map((child) =>
+      convertFeatureTree(child as Parameters<typeof convertFeatureTree>[0]),
+    );
+  }
+  return converted;
 }
 
 /**
@@ -693,6 +776,7 @@ export function buildInsights(
       cls: clsAudit,
       tbtMs: tbtAuditSane,
       tbtStatus: tbtAuditSane != null ? 'measured' : 'unavailable',
+      failedAudits: collectFailedAudits(lhr),
     },
     lcpElement,
     renderBlocking,

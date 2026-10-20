@@ -131,6 +131,32 @@ export function extractCriticalPath(ir: IRBundle): CriticalPath | undefined {
     deepestChainDepth: cpInfo.depth,
     longestSingleRequest: result.longestSingleRequest,
     urlsOnLongestPath: cpInfo.urlsOnLongestPath?.length ? cpInfo.urlsOnLongestPath : undefined,
+    tree: cpInfo.tree,
+    documentChain: extractDocumentChain(ir),
+  };
+}
+
+/**
+ * Collect the document responses the browser loaded.
+ *
+ * When the page loaded more than one document, the first ones were thrown
+ * away — the browser navigated away from a page it had already received.
+ * The time spent on them is the cost of that navigation.
+ */
+function extractDocumentChain(ir: IRBundle): CriticalPath['documentChain'] {
+  const documents = ir.network.requests.filter(
+    (r) => r.resourceType === 'Document' && !r.url.startsWith('data:'),
+  );
+  if (documents.length < 2) return undefined;
+
+  const discarded = documents.slice(0, -1);
+  const final = documents[documents.length - 1]!;
+
+  return {
+    count: documents.length,
+    urls: documents.map((r) => r.url),
+    discardedMs: discarded.reduce((sum, r) => sum + safe(r.duration), 0),
+    chainMs: Math.max(0, safe(final.startTime) - safe(documents[0]!.startTime)),
   };
 }
 
