@@ -78,7 +78,7 @@ REPORT OPTIONS
   --help, -h            Show this help message
 
 RUN OPTIONS
-  --url <url>           Target URL to analyze (required)
+  --url <url>           Target URL to analyze (required, the scheme is optional)
   --output <dir>        Output directory (default: ./perfgraph-output)
   --runs <n>            Number of collection runs (default: 1)
   --pretty              Pretty-print final report JSON
@@ -103,6 +103,11 @@ EXAMPLES
   perfgraph report ./features.toon --output report.toon --pretty
   perfgraph run --url https://example.com --pretty          (full pipeline)
   perfgraph run --url https://example.com --pretty --runs 3
+
+AGENT SKILL
+  This package ships skills/perfgraph: instructions for an AI agent to run
+  the pipeline and read the report. Copy it into the skills directory of
+  your agent — see the README for the path.
 `);
 }
 
