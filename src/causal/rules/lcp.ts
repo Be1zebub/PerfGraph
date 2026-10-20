@@ -238,6 +238,7 @@ export const renderBlockingLcpChain = {
         value: rb.blockingRequestCount,
         unit: 'requests',
         threshold: 2,
+        impactSurface: 'initial-viewport',
         evidence: rbEvidence,
       },
       {

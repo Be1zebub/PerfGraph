@@ -130,6 +130,10 @@ export const excessiveRequestsChain = {
         id: 'slow-load-many-requests',
         label: 'Slow page load',
         type: 'impact',
+        value: cp.elapsedCriticalPathMs,
+        unit: 'ms',
+        threshold: undefined,
+        impactSurface: 'total-page',
       },
     ];
 

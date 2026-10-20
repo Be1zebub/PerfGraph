@@ -92,6 +92,15 @@ const REMEDIATIONS: Record<RemediationKey, string> = {
   'bandwidth-contention':
     'Reduce bandwidth contention: prioritise critical resources (preload), ' +
     'defer non-critical ones (lazy load, async/defer), use HTTP/2.',
+  'document-chain':
+    'Serve the final URL directly. The browser loaded a document and then ' +
+    'navigated away from it, so the visitor paid for a response they never saw.',
+  'discarded-document':
+    'Remove the redirect: answer the first request with the final page ' +
+    '(or redirect in the server response instead of loading a document that ' +
+    'is thrown away).',
+  'delayed-by-document-chain':
+    'The document chain delays the content: serve the final URL directly.',
 
   // ---- JS rules ----
   'high-main-thread-blocking':
