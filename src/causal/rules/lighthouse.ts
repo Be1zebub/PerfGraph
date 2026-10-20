@@ -87,7 +87,7 @@ export const lighthouseFindingsChain = {
 
       nodes.push({
         id: impactId,
-        label: 'Work that could be avoided',
+        label: `${formatValue(finding.value, finding.unit)} of avoidable work`,
         type: 'impact',
         severity,
         impactSurface: 'total-page',
