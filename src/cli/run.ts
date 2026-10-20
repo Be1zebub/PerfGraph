@@ -31,6 +31,7 @@ import { buildReport } from '../report/index.js';
 import { buildReportMarkdown } from '../report/markdown.js';
 import { DEFAULT_RUN_OPTIONS } from '../shared/types.js';
 import type { CollectorRunOptions } from '../shared/types.js';
+import { normalizeUrl } from '../shared/utils.js';
 
 /** Help text */
 const RUN_HELP = `
@@ -266,13 +267,14 @@ export async function runRunFromArgs(
     const arg = args[i]!;
 
     switch (arg) {
-      case '--url':
+      case '--url': {
         if (i + 1 >= args.length) {
           console.error('Error: --url requires a value');
           return null;
         }
-        url = args[++i]!;
+        url = normalizeUrl(args[++i]!);
         break;
+      }
 
       case '--output':
         if (i + 1 >= args.length) {

@@ -174,7 +174,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error) => {
-  console.error(`Fatal error: ${error}`);
+main().catch((error: unknown) => {
+  // A user-facing failure, not a crash: print the message, not the stack.
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`Error: ${message}`);
   process.exit(1);
 });

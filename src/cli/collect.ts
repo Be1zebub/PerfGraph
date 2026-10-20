@@ -9,6 +9,7 @@
 import { run } from '../collect/orchestrator.js';
 import type { CollectorRunOptions } from '../shared/types.js';
 import { DEFAULT_RUN_OPTIONS } from '../shared/types.js';
+import { normalizeUrl } from '../shared/utils.js';
 
 /** Result of the collect command execution */
 export interface CollectResult {
@@ -83,7 +84,7 @@ function parseArgs(args: string[]): CollectorRunOptions | null {
           console.error('Error: --url requires a value');
           return null;
         }
-        options.url = args[++i]!;
+        options.url = normalizeUrl(args[++i]!);
         break;
 
       case '--output':
