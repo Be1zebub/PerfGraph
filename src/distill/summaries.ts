@@ -30,6 +30,12 @@ export interface NetworkSummary {
     resourceType: string;
     bytes: number;
   }>;
+  /** The heaviest resources — what dominates the transfer */
+  topRequestsBySize: Array<{
+    url: string;
+    bytes: number;
+    resourceType: string;
+  }>;
   blockingResources: Array<{ url: string; resourceType: string }>;
   /** What triggered each request — the dependency edges of the load */
   initiatorChains: Array<{
@@ -121,6 +127,14 @@ export function buildNetworkSummary(network: NetworkRawData): NetworkSummary {
       resourceType: r.type ?? 'unknown',
       bytes: r.response?.encodedDataLength ?? 0,
     })),
+    topRequestsBySize: [...requests]
+      .sort((a, b) => (b.response?.encodedDataLength ?? 0) - (a.response?.encodedDataLength ?? 0))
+      .slice(0, 10)
+      .map((r) => ({
+        url: r.url,
+        bytes: r.response?.encodedDataLength ?? 0,
+        resourceType: r.type ?? 'unknown',
+      })),
     blockingResources: requests
       .filter(
         (r) => r.type === 'Stylesheet' || r.type === 'Script',
