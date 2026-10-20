@@ -22,6 +22,10 @@ the only runtime interface, and the agent-facing layer is a skill.
   npm package.
 - `insights.toon` separates the two measurements: `metrics` from the
   PerfGraph run and `lighthouse` from Lighthouse's own navigation.
+- The Lighthouse insight audits become findings in the report: forced
+  reflows, oversized images, bytes that are not cached, duplicated or
+  legacy JavaScript, fonts that block the text. Each one carries the value
+  Lighthouse measured and the sources involved.
 - `criticalPath.documentChain` reports a page that loaded more than one
   document, with the server time spent on a response nobody used and when
   the content the visitor saw arrived.
@@ -29,6 +33,8 @@ the only runtime interface, and the agent-facing layer is a skill.
   visitor received — cache status, cache-control, content encoding, alt-svc.
 - `insights.lighthouse.failedAudits` lists the Lighthouse audits that did not
   pass, with their values.
+- the network summary lists the heaviest resources, not only the slowest
+- the run summary reports the median across runs
 - the CLI prints a short summary for the person who ran it: score, issue
   counts, data-quality warnings and where the report is.
 
