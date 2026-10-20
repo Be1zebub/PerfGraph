@@ -167,6 +167,14 @@ cp -r node_modules/perfgraph/skills/perfgraph ~/.config/opencode/skills/
 cp -r node_modules/perfgraph/skills/perfgraph ~/.claude/skills/
 ```
 
+If you work on the skill itself, link it instead of copying it. A copy goes
+stale, and then the agent learns the old way to run the tool:
+
+```bash
+# Linux and macOS
+ln -s "$PWD/node_modules/perfgraph/skills/perfgraph" ~/.config/opencode/skills/perfgraph
+```
+
 In a checkout of this repository the skill lives at
 [`skills/perfgraph/SKILL.md`](skills/perfgraph/SKILL.md), with the metric
 reference in `skills/perfgraph/references/interpretation.md`.

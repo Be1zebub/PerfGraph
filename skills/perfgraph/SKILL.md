@@ -3,9 +3,14 @@ name: perfgraph
 description: Analyze web performance URLs with the PerfGraph CLI and interpret its deterministic reports, causal chains, and prioritized remediation data. Use when the request names perfgraph, or asks to measure or diagnose loading speed, Core Web Vitals, Lighthouse performance, bottlenecks, or web performance regressions.
 metadata:
   short-description: Run PerfGraph CLI and explain performance findings
+  version: 0.2.0
 ---
 
 # PerfGraph CLI
+
+Skill version 0.2.0 — matches the `perfgraph` package. A copy of this skill
+that is older than the installed package gives outdated guidance; check it
+with `perfgraph --version`.
 
 Use this skill when the task requires a fresh synthetic performance analysis or
 interpretation of an existing PerfGraph run. The CLI is the execution layer;
