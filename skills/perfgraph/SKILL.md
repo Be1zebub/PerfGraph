@@ -27,9 +27,15 @@ perfgraph run --url <url> --output ./perfgraph-output --pretty
 Use `--runs 1` for a quick look, and `--runs 3` when the question is why
 something is slow. The first run is often an outlier — a cold JIT, a cold
 DNS, a cold connection — so a single run can be several times worse than the
-page normally is, and a fix aimed at that outlier is aimed at nothing. The
-per-run metrics and their spread land in `runs-summary.json` next to the run
-directories. `variance` is the spread of the lab run — the run the report
+page normally is, and a fix aimed at that outlier is aimed at nothing.
+
+`insights.multiRun` says how many runs were collected, which one the report
+describes, and the median of the lab runs. When it is there, treat the
+findings of the described run as the cold start unless the median agrees with
+them, and say which number you quote.
+
+The per-run metrics and their spread land in `runs-summary.json` next to the
+run directories. `variance` is the spread of the lab run — the run the report
 describes — and `varianceLighthouse` is the spread of Lighthouse's own runs.
 Quote the median, and say which one you mean. Use `--device "iPhone 13"` for mobile emulation. Optional collectors can be
 disabled with `--no-lighthouse`, `--no-coverage`, `--no-console`, and `--no-dom`.

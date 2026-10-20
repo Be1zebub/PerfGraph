@@ -12,7 +12,7 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { writeManifest } from '../output/manifest.js';
-import { buildRunsSummary, collectRunMetrics, type RunMetrics } from '../output/runs-summary.js';
+import { buildRunsSummary, collectRunMetrics, summarize, type RunMetrics } from '../output/runs-summary.js';
 import { convertToon } from '../output/toon.js';
 import { run } from '../collect/orchestrator.js';
 import type { RawDataBundle } from '../collect/types.js';
@@ -196,7 +196,42 @@ export async function runRun(
   );
 
   // -----------------------------------------------------------------------
-  // 6. Insights
+  // 6. Collect the metrics of every run
+  // -----------------------------------------------------------------------
+  // The report describes the first run. When more were collected, the spread
+  // of the lab runs belongs to the artifacts: the first run is often a cold
+  // start and reads as the state of the page.
+  const runOutcomes = successRuns.map((result) => ({
+    index: result.index,
+    outputDir: resolve(result.outputDir),
+    success: result.success,
+    warningCount: result.warningCount,
+    error: result.error,
+    files: result.files,
+  }));
+
+  const labMetrics = new Map<number, RunMetrics['lab']>();
+  for (const result of successRuns) {
+    try {
+      const ir = normalize(loadRunDir(resolve(result.outputDir)));
+      labMetrics.set(result.index, {
+        lcpMs: ir.performance.coreWebVitals.lcp ?? null,
+        fcpMs: ir.performance.coreWebVitals.fcp ?? null,
+        cls: ir.performance.coreWebVitals.cls ?? null,
+        tbtMs: ir.performance.coreWebVitals.tbt ?? null,
+      });
+    } catch {
+      // A run without a readable IR contributes no lab metrics.
+    }
+  }
+
+  const runMetrics =
+    runOutcomes.length > 1
+      ? await collectRunMetrics(runOutcomes, labMetrics)
+      : undefined;
+
+  // -----------------------------------------------------------------------
+  // 7. Insights
   // -----------------------------------------------------------------------
   // The insights reuse the report's recommendations so that both artifacts
   // give an agent the same answer.
@@ -206,6 +241,19 @@ export async function runRun(
     runWarnings,
     report.recommendations,
   );
+
+  if (runMetrics && runMetrics.length > 1) {
+    const lcpSpread = summarize(runMetrics.map((m) => m.lab.lcpMs));
+    const tbtSpread = summarize(runMetrics.map((m) => m.lab.tbtMs));
+    insights.multiRun = {
+      runs: runMetrics.length,
+      describedRun: runOutcomes[0]!.index,
+      median: {
+        ...(lcpSpread ? { lcpMs: lcpSpread.median } : {}),
+        ...(tbtSpread ? { tbtMs: tbtSpread.median } : {}),
+      },
+    };
+  }
 
   // Write extracted features
   featuresFile = resolve(runDir, 'features.toon');
@@ -227,6 +275,15 @@ export async function runRun(
 
   // Write manifest
   await writeManifest(runDir);
+
+  // The spread of the runs, with the lab metrics first: they describe
+  // the run the report is about.
+  if (runMetrics && runMetrics.length > 1) {
+    const summary = buildRunsSummary(url, runOutcomes, runMetrics);
+    const summaryPath = resolve(output, 'runs-summary.json');
+    writeFileSync(summaryPath, JSON.stringify(summary, null, 2), 'utf-8');
+    console.error(`Summary: ${summaryPath}`);
+  }
 
   // The report describes the lab run, so the spread of the runs has to be
   // the spread of the lab metrics. The Lighthouse run is reported next to it,

@@ -47,6 +47,21 @@ export interface Insights {
   analyzedAt: string;
   runContext?: RunContext;
   /**
+   * The context of a multi-run collection.
+   *
+   * The report describes one run. When more were collected, the agent has to
+   * know which one and how the others compare, otherwise the cold start of
+   * the first run looks like the state of the page.
+   */
+  multiRun?: {
+    /** How many runs were collected */
+    runs: number;
+    /** The run the report describes */
+    describedRun: number;
+    /** The median of the lab runs */
+    median?: { lcpMs?: number; tbtMs?: number };
+  };
+  /**
    * Core Web Vitals measured by PerfGraph in the traced browser run.
    *
    * These come from the run described by `runContext` — an unthrottled
