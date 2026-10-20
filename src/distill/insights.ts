@@ -221,7 +221,21 @@ function getLHRRoot(raw: unknown): Record<string, unknown> {
  * The insight audits carry findings the causal rules cannot derive: forced
  * reflows, main-thread work, redirects, console errors. They are listed with
  * their values so an agent sees them without opening the raw result.
+ *
+ * The Core Web Vitals audits are left out: their values are already in the
+ * `lighthouse` block, and repeating them only dilutes the list.
  */
+const LIGHTHOUSE_METRIC_AUDITS = new Set([
+  'first-contentful-paint',
+  'largest-contentful-paint',
+  'cumulative-layout-shift',
+  'speed-index',
+  'total-blocking-time',
+  'interactive',
+  'time-to-interactive',
+  'max-potential-fid',
+]);
+
 function collectFailedAudits(
   lhr: Record<string, unknown>,
 ): NonNullable<Insights['lighthouse']['failedAudits']> | undefined {
@@ -230,6 +244,7 @@ function collectFailedAudits(
 
   for (const [id, value] of Object.entries(audits)) {
     if (!isRecord(value)) continue;
+    if (LIGHTHOUSE_METRIC_AUDITS.has(id)) continue;
     const score = typeof value.score === 'number' ? value.score : undefined;
     const displayMode = typeof value.scoreDisplayMode === 'string' ? value.scoreDisplayMode : undefined;
     // A score of null means the audit did not run; an errored audit has no
@@ -248,7 +263,8 @@ function collectFailedAudits(
   }
 
   if (failed.length === 0) return undefined;
-  return failed;
+  // The audits that failed hardest come first.
+  return failed.sort((a, b) => (a.score ?? 1) - (b.score ?? 1));
 }
 
 /** Extract numericValue from a Lighthouse audit by ID. */function getAuditNumericValue(
