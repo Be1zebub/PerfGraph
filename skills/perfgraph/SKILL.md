@@ -126,8 +126,9 @@ format or image priority changes without image evidence.
 
 The LCP element comes from the browser itself: `insights.lcpElement.source` is
 `performance-api`, `lighthouse` or `trace`, and `type` is `text` or `image`.
-Only an image LCP carries an `lcpElementUrl` and resource load timings. When
-the element is unknown, report the LCP as a single render delay instead of
-naming a resource. Never present the largest downloaded image as the LCP
-element. The traced lab LCP and the Lighthouse LCP come from two different
-runs — report both with their source instead of merging them.
+Only an image LCP carries an `lcpElementUrl` and resource load timings, and
+that URL may be an inline `data:` URI — nothing to download, preload or
+re-encode. When the element is unknown, report the LCP as a single render
+delay instead of naming a resource. Never present the largest downloaded
+image as the LCP element. The traced lab LCP and the Lighthouse LCP come from
+two different runs — report both with their source instead of merging them.

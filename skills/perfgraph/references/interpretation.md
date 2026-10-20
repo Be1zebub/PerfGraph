@@ -65,11 +65,27 @@ Limitations: <warnings, missing collectors, confidence caveats>.
   `trace`;
 - `type`: `text` or `image`. A text LCP has no image resource, so image
   recommendations do not apply to it;
-- `nodeLabel` / `selector`: the element itself.
+- `nodeLabel` / `selector`: the element itself;
+- `lcpElementUrl`: the resource, when the LCP element is an image. It may be an
+  inline `data:` URI — in that case there is nothing to download, preload or
+  re-encode, and the delay to attack is the render delay.
 
-Only an image LCP has an `lcpElementUrl` and load timings. When the element is
-unknown, the LCP time is reported as a single render delay rather than split
-into a guessed resource delay.
+Only an image LCP has load timings. When the element is unknown, the LCP time
+is reported as a single render delay rather than split into a guessed resource
+delay.
+
+## What is measured and what is not
+
+- `insights.metrics.tbtMs` is the trace measurement. `insights.lighthouse.tbtMs`
+  is Lighthouse's own audit value; a headless run can inflate it, and it is
+  reported as unavailable when it exceeds a sane bound.
+- `jsHotspots.longTaskCount` comes from the browser's `LongTask` events.
+  `source` says so, and `console-gap` means it was inferred from the gaps
+  between console messages, which is much weaker.
+- `mainThreadBlocking.busyMs` covers the page lifecycle window, not the whole
+  trace. Work that happened after the load event did not block the user.
+- A `data:` URI request is not third-party traffic: it has no origin and no
+  network cost, and it is excluded from the ownership buckets.
 
 ## ASCII causal graph
 
