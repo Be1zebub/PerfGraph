@@ -199,6 +199,15 @@ warnings and missing data. `.toon` files are text and should not be parsed as
 JSON. The full agent instructions live in
 [`skills/perfgraph/SKILL.md`](skills/perfgraph/SKILL.md).
 
+## Runs and their spread
+
+`perfgraph run --runs 3` writes `runs-summary.json` next to the run
+directories. It holds the metrics of every run, both the lab run PerfGraph
+measured and the Lighthouse run, and the spread of each: `variance` for the
+lab run — the run the report describes — and `varianceLighthouse` for
+Lighthouse's own runs. The first run is often an outlier, so the median is the
+number to quote.
+
 ## Insights format
 
 `insights.toon` is the compact triage artifact. It keeps the two measurement

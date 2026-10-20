@@ -45,8 +45,28 @@ const THIRD_PARTY_PATTERNS: Record<string, string> = {
   'vimeo': 'media',
 };
 
+/**
+ * Domains that belong to the same organisation as the site.
+ *
+ * A site cannot be classified by its own hostname alone: Google serves its
+ * assets from gstatic.com, and GitHub from githubassets.com. Without these the
+ * report calls a site's own infrastructure third-party.
+ *
+ * The key is the organisation, the values are the domains it serves from.
+ */
 const KNOWN_FIRST_PARTY_CDNS: Record<string, string[]> = {
-  'github.com': ['github.githubassets.com'],
+  'github.com': ['githubassets.com', 'githubusercontent.com'],
+  'google.com': [
+    'gstatic.com',
+    'googleapis.com',
+    'googleusercontent.com',
+    'withgoogle.com',
+    'googlesyndication.com',
+    'googletagmanager.com',
+    'google-analytics.com',
+  ],
+  'youtube.com': ['ytimg.com', 'googlevideo.com'],
+  'wikipedia.org': ['wikimedia.org', 'wikimediafoundation.org'],
 };
 
 /**
@@ -83,11 +103,41 @@ function categoriseHostname(hostname: string): string {
   return 'other';
 }
 
+/**
+ * Whether two hosts belong to the same organisation.
+ *
+ * Both the site and the asset host are often subdomains: `www.google.com`
+ * serves from `fonts.gstatic.com`. The list holds the organisation and the
+ * domains it serves from, and a host belongs to a domain when it is that
+ * domain or a subdomain of it.
+ */
+function isSameOrganisation(pageHost: string, candidateHost: string): boolean {
+  for (const [organisation, domains] of Object.entries(KNOWN_FIRST_PARTY_CDNS)) {
+    const pageMatches =
+      pageHost === organisation || pageHost.endsWith(`.${organisation}`);
+    if (!pageMatches) continue;
+    for (const domain of domains) {
+      if (candidateHost === domain || candidateHost.endsWith(`.${domain}`)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 function classifyOwnership(pageUrl: string, requestUrl: string, ownedDomains: string[] = []): 'first-party' | 'first-party-cdn' | 'third-party-vendor' | 'external-cdn' | 'unknown' {
   const page = new URL(pageUrl);
   const request = new URL(requestUrl);
   if (request.origin === page.origin || request.hostname === page.hostname) return 'first-party';
-  if (KNOWN_FIRST_PARTY_CDNS[page.hostname]?.includes(request.hostname) || ownedDomains.includes(request.hostname)) return 'first-party-cdn';
+  if (
+    isSameOrganisation(page.hostname, request.hostname) ||
+    ownedDomains.some(
+      (domain) =>
+        request.hostname === domain || request.hostname.endsWith(`.${domain}`),
+    )
+  ) {
+    return 'first-party-cdn';
+  }
   const category = categoriseHostname(request.hostname);
   if (category === 'cdn') return 'external-cdn';
   if (category !== 'other') return 'third-party-vendor';

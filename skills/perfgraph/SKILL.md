@@ -29,8 +29,9 @@ something is slow. The first run is often an outlier — a cold JIT, a cold
 DNS, a cold connection — so a single run can be several times worse than the
 page normally is, and a fix aimed at that outlier is aimed at nothing. The
 per-run metrics and their spread land in `runs-summary.json` next to the run
-directories, with min, max, mean, median and standard deviation. Quote the
-median. Use `--device "iPhone 13"` for mobile emulation. Optional collectors can be
+directories. `variance` is the spread of the lab run — the run the report
+describes — and `varianceLighthouse` is the spread of Lighthouse's own runs.
+Quote the median, and say which one you mean. Use `--device "iPhone 13"` for mobile emulation. Optional collectors can be
 disabled with `--no-lighthouse`, `--no-coverage`, `--no-console`, and `--no-dom`.
 
 If the command is not installed but this repository is available, use the

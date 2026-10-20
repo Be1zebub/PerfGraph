@@ -12,6 +12,7 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { writeManifest } from '../output/manifest.js';
+import { buildRunsSummary, collectRunMetrics, type RunMetrics } from '../output/runs-summary.js';
 import { convertToon } from '../output/toon.js';
 import { run } from '../collect/orchestrator.js';
 import type { RawDataBundle } from '../collect/types.js';
@@ -226,6 +227,54 @@ export async function runRun(
 
   // Write manifest
   await writeManifest(runDir);
+
+  // The report describes the lab run, so the spread of the runs has to be
+  // the spread of the lab metrics. The Lighthouse run is reported next to it,
+  // separately.
+  if (successRuns.length > 1) {
+    const labMetrics = new Map<number, RunMetrics['lab']>();
+    for (const result of successRuns) {
+      try {
+        const ir = normalize(loadRunDir(resolve(result.outputDir)));
+        labMetrics.set(result.index, {
+          lcpMs: ir.performance.coreWebVitals.lcp ?? null,
+          fcpMs: ir.performance.coreWebVitals.fcp ?? null,
+          cls: ir.performance.coreWebVitals.cls ?? null,
+          tbtMs: ir.performance.coreWebVitals.tbt ?? null,
+        });
+      } catch {
+        // A run without a readable IR contributes no lab metrics.
+      }
+    }
+
+    const metrics = await collectRunMetrics(
+      successRuns.map((result) => ({
+        index: result.index,
+        outputDir: resolve(result.outputDir),
+        success: result.success,
+        warningCount: result.warningCount,
+        error: result.error,
+        files: result.files,
+      })),
+      labMetrics,
+    );
+
+    const summary = buildRunsSummary(
+      url,
+      successRuns.map((result) => ({
+        index: result.index,
+        outputDir: resolve(result.outputDir),
+        success: result.success,
+        warningCount: result.warningCount,
+        error: result.error,
+        files: result.files,
+      })),
+      metrics,
+    );
+    const summaryPath = resolve(output, 'runs-summary.json');
+    writeFileSync(summaryPath, JSON.stringify(summary, null, 2), 'utf-8');
+    console.error(`Summary: ${summaryPath}`);
+  }
 
   // Also print to stdout
   console.log(reportJson);

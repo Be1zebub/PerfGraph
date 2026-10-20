@@ -34,7 +34,8 @@ the only runtime interface, and the agent-facing layer is a skill.
 - `insights.lighthouse.failedAudits` lists the Lighthouse audits that did not
   pass, with their values.
 - the network summary lists the heaviest resources, not only the slowest
-- the run summary reports the median across runs
+- the run summary reports the spread of the lab run, which is the run the
+  report describes, and the spread of the Lighthouse runs separately
 - the CLI prints a short summary for the person who ran it: score, issue
   counts, data-quality warnings and where the report is.
 
@@ -52,6 +53,8 @@ the only runtime interface, and the agent-facing layer is a skill.
   and Total Blocking Time counts the main thread only
 - the run environment and the collection warnings reach the report
 - the report and the insights judge the quality of the data the same way
+- the assets of a site are no longer counted as third-party traffic when they
+  belong to the same organisation, such as gstatic.com for a Google site
 - a URL without a scheme is accepted, and a failed run prints its message
   instead of a stack trace
 - the insights and the report give the same recommendations
