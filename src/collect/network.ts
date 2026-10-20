@@ -83,6 +83,12 @@ interface CdpLoadingFailed {
   timestamp: number;
 }
 
+interface CdpLoadingFinished {
+  requestId: string;
+  encodedDataLength: number;
+  timestamp: number;
+}
+
 interface CdpServedFromCache {
   requestId: string;
 }
@@ -154,6 +160,10 @@ export class NetworkCollector implements Collector {
     session.on(
       'Network.loadingFailed',
       this.#onLoadingFailed.bind(this) as (payload: unknown) => void,
+    );
+    session.on(
+      'Network.loadingFinished',
+      this.#onLoadingFinished.bind(this) as (payload: unknown) => void,
     );
     session.on(
       'Network.requestServedFromCache',
@@ -322,6 +332,33 @@ export class NetworkCollector implements Collector {
       remoteIPAddress: res.remoteIPAddress,
       remotePort: res.remotePort,
     };
+  }
+
+  /**
+   * Handle Network.loadingFinished — captures the transferred body size.
+   *
+   * `responseReceived` reports `encodedDataLength` for the response headers
+   * only, so the body size is known only here. Without this every request
+   * looks like a few hundred bytes and the byte totals are meaningless.
+   */
+  #onLoadingFinished(raw: CdpLoadingFinished): void {
+    const { requestId, encodedDataLength, timestamp } = raw;
+    const entry = this.requestMap.get(requestId);
+    if (!entry) return;
+
+    if (!entry.response) {
+      entry.response = {
+        status: 0,
+        statusText: '',
+        headers: {},
+        mimeType: '',
+        encodedDataLength,
+      };
+    } else {
+      entry.response.encodedDataLength = encodedDataLength;
+    }
+
+    entry.finishedTimestamp = timestamp;
   }
 
   /**

@@ -201,10 +201,15 @@ function buildCoreWebVitals(
  * - categories: count of events per top-level category
  *   (cat field split by "," — take the first segment)
  * - threadActivity: per-tid duration sums + main thread identification
+ *
+ * Thread activity is only counted inside the page lifecycle window. A trace
+ * keeps recording long after the page settled, and that post-load work is
+ * not what blocked the user.
  */
 function buildTraceSummary(
   events: TraceRawData['events'],
   anchor: ClockAnchor,
+  windowEndMs?: number,
 ): TraceSummary {
   if (events.length === 0) {
     return {
@@ -252,16 +257,24 @@ function buildTraceSummary(
     }
   }
 
-  // Per-category thread activity (on main thread only)
+  // Per-category thread activity (on main thread only, inside the window)
   const byCategory: Record<string, number> = {};
+  let mainThreadTotalMs = 0;
   for (const ev of events) {
-    if (ev.tid === mainTid && isNumber(ev.dur)) {
-      const topCat = ev.cat.split(',')[0] ?? 'unknown';
-      byCategory[topCat] = (byCategory[topCat] ?? 0) + ev.dur / 1000;
-    }
-  }
+    if (ev.tid !== mainTid || !isNumber(ev.dur)) continue;
 
-  const mainThreadTotalMs = (threadDurations.get(mainTid) ?? 0) / 1000;
+    let durUs = ev.dur;
+    if (windowEndMs !== undefined) {
+      const startMs = toRelativeMs(ev.ts, 'cdp-monotonic-us', anchor);
+      if (startMs > windowEndMs) continue;
+      const remainingUs = (windowEndMs - startMs) * 1000;
+      if (remainingUs < durUs) durUs = Math.max(0, remainingUs);
+    }
+
+    const topCat = ev.cat.split(',')[0] ?? 'unknown';
+    byCategory[topCat] = (byCategory[topCat] ?? 0) + durUs / 1000;
+    mainThreadTotalMs += durUs / 1000;
+  }
 
   return {
     totalDuration: Math.max(0, totalDuration),
@@ -269,6 +282,7 @@ function buildTraceSummary(
     categories,
     threadActivity: {
       totalMs: mainThreadTotalMs,
+      windowMs: windowEndMs,
       byCategory,
     },
   };
@@ -333,7 +347,16 @@ export function buildPerformanceIR(
 
   const navigation = buildNavigation(events, anchor);
   const { coreWebVitals, lcpCandidate: traceCandidate } = buildCoreWebVitals(events, anchor);
-  const traceSummary = buildTraceSummary(events, anchor);
+
+  // The page lifecycle window: from navigation start to the load event. Work
+  // after that point did not block the user.
+  const windowEndMs = navigation.loadEventEnd > 0
+    ? navigation.loadEventEnd
+    : navigation.domContentLoaded > 0
+      ? navigation.domContentLoaded
+      : undefined;
+
+  const traceSummary = buildTraceSummary(events, anchor, windowEndMs);
 
   // The Performance API entry is the final LCP candidate, so it wins over the
   // trace, which may only carry the first candidate after navigation.

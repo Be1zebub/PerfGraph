@@ -92,6 +92,12 @@ export function extractRenderBlocking(ir: IRBundle): RenderBlockingScore | undef
     ?.reduce((sum, r) => sum + (r.wastedMs ?? 0), 0);
   const networkUrls = new Set(networkResources.map((resource) => resource.url));
   const lighthouseUrls = new Set((lighthouseResources ?? []).map((resource) => resource.url));
+  // A conflict is a disagreement about *which* resources block the render.
+  // Equal counts with different URLs are still a conflict.
+  const urlSetsDiffer =
+    networkUrls.size !== lighthouseUrls.size ||
+    [...networkUrls].some((url) => !lighthouseUrls.has(url));
+  const sourceConflict = lighthouseResources != null && urlSetsDiffer;
 
   return {
     blockingRequestCount,
@@ -105,11 +111,11 @@ export function extractRenderBlocking(ir: IRBundle): RenderBlockingScore | undef
     totalWastedMs: lighthouseResources ? totalWastedMs : undefined,
     networkResourceCount: networkResources.length,
     lighthouseResourceCount: lighthouseResources?.length ?? 0,
-    sourceConflict: lighthouseResources != null && lighthouseResources.length !== networkResources.length,
+    sourceConflict,
     networkResources,
     lighthouseResources: lighthouseResources ?? [],
     networkOnlyCount: [...networkUrls].filter((url) => !lighthouseUrls.has(url)).length,
     lighthouseOnlyCount: [...lighthouseUrls].filter((url) => !networkUrls.has(url)).length,
-    sourceStatus: lighthouseResources != null && lighthouseResources.length !== networkResources.length ? 'conflicting' : 'measured',
+    sourceStatus: sourceConflict ? 'conflicting' : 'measured',
   };
 }

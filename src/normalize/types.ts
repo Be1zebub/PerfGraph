@@ -85,6 +85,8 @@ export type LCPCandidate = z.infer<typeof LCPCandidateSchema>;
 
 export const ThreadActivitySchema = z.object({
   totalMs: z.number(),
+  /** Length of the analysed window in ms (the page lifecycle) */
+  windowMs: z.number().optional(),
   byCategory: z.record(z.string(), z.number()),
 });
 

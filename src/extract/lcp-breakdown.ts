@@ -178,14 +178,19 @@ function findLcpResource(
  * Primary: sum of DNS + Connect + SSL + Wait from the Document request's timing.
  * Fallback: Lighthouse audit 'server-response-time' numericValue.
  * Last resort: 0.
+ *
+ * The parts are kept as well: most of a slow TTFB is connection setup rather
+ * than server processing, and the recommendation has to reflect that.
  */
-function extractTTFB(ir: IRBundle): number {
+function extractTTFB(ir: IRBundle): { total: number; parts?: LCPBreakdown['ttfbParts'] } {
   // Primary: Document request timing
   const doc = findDocumentRequest(ir.network.requests);
   if (doc?.timing) {
     const { dns = 0, connect = 0, ssl = 0, wait = 0 } = doc.timing;
     const ttfb = dns + connect + ssl + wait;
-    if (Number.isFinite(ttfb)) return Math.max(0, ttfb);
+    if (Number.isFinite(ttfb)) {
+      return { total: Math.max(0, ttfb), parts: { dns, connect, ssl, wait } };
+    }
   }
 
   // Fallback: Lighthouse server-response-time audit
@@ -193,10 +198,10 @@ function extractTTFB(ir: IRBundle): number {
     (a) => a.id === 'server-response-time',
   );
   if (lhAudit?.numericValue !== undefined && Number.isFinite(lhAudit.numericValue)) {
-    return Math.max(0, lhAudit.numericValue);
+    return { total: Math.max(0, lhAudit.numericValue) };
   }
 
-  return 0;
+  return { total: 0 };
 }
 
 /**
@@ -222,7 +227,15 @@ export function extractLCPBreakdown(ir: IRBundle): LCPBreakdown | undefined {
     hasTrace && hasLighthouse ? 'mixed' :
     hasLighthouse ? 'lighthouse' : 'trace';
 
-  const ttfb = extractTTFB(ir);
+  // The value origin is more precise than `source`: the Performance API entry
+  // overrides the trace candidate, and both are separate from Lighthouse.
+  const valueOrigin: LCPBreakdown['valueOrigin'] = ir.performance.lcpEntry
+    ? 'performance-api'
+    : hasTrace
+      ? 'trace'
+      : 'lighthouse';
+
+  const { total: ttfb, parts: ttfbParts } = extractTTFB(ir);
   const { kind, element, urlHint } = resolveLcpElement(ir, source);
   const lcpResource = findLcpResource(ir, kind, urlHint);
   const entry = ir.performance.lcpEntry;
@@ -236,6 +249,7 @@ export function extractLCPBreakdown(ir: IRBundle): LCPBreakdown | undefined {
 
     return {
       ttfb,
+      ttfbParts,
       resourceLoadDelay,
       resourceLoadTime,
       elementRenderDelay,
@@ -244,6 +258,7 @@ export function extractLCPBreakdown(ir: IRBundle): LCPBreakdown | undefined {
       lcpResourceType: lcpResource?.resourceType ?? 'Image',
       lcpElement: element,
       source,
+      valueOrigin,
     };
   }
 
@@ -260,6 +275,7 @@ export function extractLCPBreakdown(ir: IRBundle): LCPBreakdown | undefined {
       lcpResourceType: undefined,
       lcpElement: element,
       source,
+      valueOrigin,
     };
   }
 
@@ -269,6 +285,7 @@ export function extractLCPBreakdown(ir: IRBundle): LCPBreakdown | undefined {
 
   return {
     ttfb,
+    ttfbParts,
     resourceLoadDelay,
     resourceLoadTime,
     elementRenderDelay,
@@ -277,5 +294,6 @@ export function extractLCPBreakdown(ir: IRBundle): LCPBreakdown | undefined {
     lcpResourceType: lcpResource.resourceType,
     lcpElement: element,
     source,
+    valueOrigin,
   };
 }

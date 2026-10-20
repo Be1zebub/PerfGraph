@@ -83,6 +83,7 @@ export const ttfbLcpChain = {
         source: features.lcpBreakdown?.source ?? 'trace',
         method: 'LCP breakdown TTFB component',
       },
+      ttfbParts: features.lcpBreakdown?.ttfbParts,
     };
 
     const nodes: CausalNode[] = [
@@ -94,6 +95,7 @@ export const ttfbLcpChain = {
         value: ttfb,
         unit: 'ms',
         threshold: TTFB_WARN,
+        impactSurface: 'lcp',
         evidence: ttfbEvidence,
       },
       {
@@ -101,15 +103,23 @@ export const ttfbLcpChain = {
         label: 'Delayed HTML parsing',
         type: 'bottleneck',
         severity: sev,
+        impactSurface: 'lcp',
       },
       {
         id: 'increased-lcp',
         label: 'Increased LCP',
         type: 'impact',
-        severity: sev,
+        // The severity of the impact follows the LCP itself, not the TTFB that
+        // triggered the chain. A chain must not turn a healthy LCP into a
+        // warning.
+        severity:
+          features.lcpBreakdown?.totalLCP !== undefined
+            ? severityFromDelta(features.lcpBreakdown.totalLCP, LCP_WARN, LCP_CRIT)
+            : sev,
         value: features.lcpBreakdown?.totalLCP,
         unit: 'ms',
         threshold: LCP_WARN,
+        impactSurface: 'lcp',
       },
     ];
 

@@ -10,6 +10,7 @@ function features(overrides?: Partial<FeatureSet>): FeatureSet {
       resourceLoadTime: 0,
       elementRenderDelay: 80,
       totalLCP: 200,
+      valueOrigin: 'trace',
     },
     layoutShifts: {
       cls: 0,

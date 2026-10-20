@@ -135,7 +135,7 @@ function buildChainId(ruleId: string, path: string[]): string {
   return `${ruleId}:${path.length}`;
 }
 
-function buildDataQuality(features?: FeatureSet): ReportSummary['dataQuality'] {
+function buildDataQuality(features?: FeatureSet, runWarnings?: string[]): ReportSummary['dataQuality'] {
   const warnings: string[] = [];
 
   if (!features || Object.keys(features).length === 0) {
@@ -162,6 +162,12 @@ function buildDataQuality(features?: FeatureSet): ReportSummary['dataQuality'] {
   const criticalPath = features.criticalPath;
   if (criticalPath?.pageLifecycleMs != null && criticalPath.aggregateRequestDurationMs > criticalPath.pageLifecycleMs * 2) {
     warnings.push('Aggregate request duration greatly exceeds page lifecycle; this is parallel work, not equivalent user wait time.');
+  }
+
+  // Collection warnings belong to the report: a run that recorded a warning
+  // did not produce complete data, and saying otherwise hides the gap.
+  for (const warning of runWarnings ?? []) {
+    if (!warnings.includes(warning)) warnings.push(warning);
   }
 
   return {
@@ -212,6 +218,7 @@ export function buildReport(
   graph: CausalGraph,
   features?: FeatureSet,
   lighthousePerformance?: number,
+  runWarnings?: string[],
 ): Report {
   const g = rebuildGraph(graph);
 
@@ -322,11 +329,18 @@ export function buildReport(
     const ruleId = incomingEdge?.ruleId;
     const confidence = nodeInConfidence.get(node.id) ?? 'weak';
 
+    // A node that carries a threshold is only an issue when it exceeds that
+    // threshold. Otherwise it is context for the chain, not a finding — the
+    // chain must not turn a healthy metric into a warning.
+    const exceedsThreshold =
+      node.value == null || node.threshold == null || node.value > node.threshold;
+    const severity = exceedsThreshold ? (node.severity ?? 'info') : 'info';
+
     return {
       id: node.id,
       label: node.label,
       type: node.type,
-      severity: node.severity ?? 'info',
+      severity,
       value: node.value,
       unit: node.unit,
       threshold: node.threshold,
@@ -386,7 +400,7 @@ export function buildReport(
     topIssues,
     lighthousePerformance,
     scoreExplanation,
-    dataQuality: buildDataQuality(features),
+    dataQuality: buildDataQuality(features, runWarnings),
   };
 
   // -----------------------------------------------------------------------

@@ -24,14 +24,19 @@ export function extractMainThreadBlocking(ir: IRBundle): MainThreadBlocking | un
 
   const busyMs = traceSummary.threadActivity.totalMs;
 
-  // idleMs = totalDuration - busyMs can produce absurd values (e.g. 210M ms ≈ 58h)
-  // when totalDuration (trace event timestamps, wall-clock anchored) and busyMs
+  // The analysed window is the page lifecycle, not the whole trace: a trace
+  // keeps recording long after the page settled, and that work never blocked
+  // the user.
+  const windowMs = traceSummary.threadActivity.windowMs ?? totalDuration;
+
+  // idleMs = windowMs - busyMs can produce absurd values (e.g. 210M ms ≈ 58h)
+  // when the window (trace event timestamps, wall-clock anchored) and busyMs
   // (CDP Tracing durations, monotonic clock) come from different clock domains.
   // Clamp idleMs to a sane maximum so clock-domain mismatch doesn't pollute the output.
   const IDLE_MS_MAX = 120_000; // 2 minutes — reasonable upper bound for idle time
-  const idleMs = Math.min(IDLE_MS_MAX, Math.max(0, totalDuration - busyMs));
+  const idleMs = Math.min(IDLE_MS_MAX, Math.max(0, windowMs - busyMs));
 
-  const blockingRatio = totalDuration > 0 ? Math.min(1, Math.max(0, busyMs / totalDuration)) : 0;
+  const blockingRatio = windowMs > 0 ? Math.min(1, Math.max(0, busyMs / windowMs)) : 0;
 
   // blockingScore blends mainThreadBusyness with the raw busy ratio
   // to smooth out edge cases where one source is more reliable

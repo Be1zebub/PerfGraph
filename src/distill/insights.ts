@@ -38,7 +38,7 @@ export interface Insights {
   metrics: {
     lcpMs?: number;
     /** Which run the LCP value came from */
-    lcpSource?: 'trace' | 'lighthouse';
+    lcpSource?: 'performance-api' | 'trace' | 'lighthouse';
     fcpMs?: number;
     cls?: number;
     tbtMs?: number;
@@ -62,11 +62,14 @@ export interface Insights {
     tbtStatus?: 'measured' | 'unavailable';
   };
   lcpElement?: {
-    selector: string;
+    selector?: string;
     snippet?: string;
     nodeLabel?: string;
     source?: 'trace' | 'performance-api' | 'lighthouse';
     type?: 'text' | 'image' | 'unknown';
+    /** Resource URL of an image LCP; absent for a text LCP */
+    lcpElementUrl?: string;
+    lcpResourceType?: string;
     renderDelayMs?: number;
     resourceLoadDelayMs?: number;
     resourceLoadTimeMs?: number;
@@ -123,7 +126,11 @@ function safeNumber(value: unknown): number | undefined {
   return typeof value === 'number' ? value : undefined;
 }
 
-function buildDataQuality(features: FeatureSet, tbtMs?: number): Insights['dataQuality'] {
+function buildDataQuality(
+  features: FeatureSet,
+  tbtMs?: number,
+  runWarnings?: string[],
+): Insights['dataQuality'] {
   const warnings: string[] = [];
   if (features.lcpBreakdown == null) warnings.push('LCP breakdown is unavailable.');
   if (features.layoutShifts == null) warnings.push('Layout-shift data is unavailable.');
@@ -138,6 +145,10 @@ function buildDataQuality(features: FeatureSet, tbtMs?: number): Insights['dataQ
   const criticalPath = features.criticalPath;
   if (criticalPath?.pageLifecycleMs != null && criticalPath.aggregateRequestDurationMs > criticalPath.pageLifecycleMs * 2) {
     warnings.push('Aggregate request duration exceeds page lifecycle; interpret it as parallel work rather than user wait time.');
+  }
+  // A run that recorded a warning did not produce complete data.
+  for (const warning of runWarnings ?? []) {
+    if (!warnings.includes(warning)) warnings.push(warning);
   }
   return {
     status: warnings.length > 0 ? 'partial' : 'complete',
@@ -207,28 +218,45 @@ function buildLcpElement(
 
   if (!lb && !featureElement) return undefined;
 
-  const selector = lb?.lcpElementSelector ?? featureElement?.selector ?? '';
-  const nodeLabel = lb?.lcpElementNodeLabel ?? featureElement?.nodeLabel;
+  // The element and its timings must come from the same run. The lab run is
+  // the one the causal chains describe, so it wins when it has an element.
+  if (featureElement) {
+    const element: NonNullable<Insights['lcpElement']> = {};
+    const selector = featureElement.selector ?? '';
+    const nodeLabel = featureElement.nodeLabel;
+    if (selector) element.selector = selector;
+    if (nodeLabel !== undefined) element.nodeLabel = nodeLabel;
+    if (featureElement.snippet !== undefined) element.snippet = featureElement.snippet;
+    if (featureElement.source !== undefined) element.source = featureElement.source;
+    if (featureElement.type !== undefined) element.type = featureElement.type;
+    if (features.lcpBreakdown?.ttfb !== undefined) element.ttfbMs = features.lcpBreakdown.ttfb;
+    if (features.lcpBreakdown?.elementRenderDelay !== undefined) {
+      element.renderDelayMs = features.lcpBreakdown.elementRenderDelay;
+    }
+    if (features.lcpBreakdown?.resourceLoadDelay !== undefined) {
+      element.resourceLoadDelayMs = features.lcpBreakdown.resourceLoadDelay;
+    }
+    if (features.lcpBreakdown?.resourceLoadTime !== undefined) {
+      element.resourceLoadTimeMs = features.lcpBreakdown.resourceLoadTime;
+    }
+    if (features.lcpBreakdown?.lcpElementUrl !== undefined) {
+      element.lcpElementUrl = features.lcpBreakdown.lcpElementUrl;
+    }
+    if (features.lcpBreakdown?.lcpResourceType !== undefined) {
+      element.lcpResourceType = features.lcpBreakdown.lcpResourceType;
+    }
+    return element;
+  }
 
+  const selector = lb?.lcpElementSelector ?? '';
+  const nodeLabel = lb?.lcpElementNodeLabel;
   if (!selector && !nodeLabel) return undefined;
 
-  // Only include the fields that carry a value: the agent-facing artifact is
-  // read as text, and empty keys read like missing measurements.
   const element: NonNullable<Insights['lcpElement']> = { selector };
-  const snippet = lb?.lcpElementSnippet ?? featureElement?.snippet;
-  if (snippet !== undefined) element.snippet = snippet;
   if (nodeLabel !== undefined) element.nodeLabel = nodeLabel;
-  const source = lb?.lcpElementSelector ? 'lighthouse' : featureElement?.source;
-  if (source !== undefined) element.source = source;
-  const type = featureElement?.type;
-  if (type !== undefined) element.type = type;
+  if (lb?.lcpElementSnippet !== undefined) element.snippet = lb.lcpElementSnippet;
+  element.source = 'lighthouse';
   if (lb?.elementRenderDelay !== undefined) element.renderDelayMs = lb.elementRenderDelay;
-  if (features.lcpBreakdown?.resourceLoadDelay !== undefined) {
-    element.resourceLoadDelayMs = features.lcpBreakdown.resourceLoadDelay;
-  }
-  if (features.lcpBreakdown?.resourceLoadTime !== undefined) {
-    element.resourceLoadTimeMs = features.lcpBreakdown.resourceLoadTime;
-  }
   if (lb?.timeToFirstByte !== undefined) element.ttfbMs = lb.timeToFirstByte;
 
   return element;
@@ -306,8 +334,16 @@ function buildCriticalPath(
 }
 
 /** Collect warnings from multiple sources. */
-function buildWarnings(lighthouseJson: unknown): string[] {
+function buildWarnings(lighthouseJson: unknown, runWarnings?: string[]): string[] {
   const warnings: string[] = [];
+
+  // From the collection run: incomplete traces, failed collectors, missing
+  // data. These describe the quality of the run itself.
+  for (const warning of runWarnings ?? []) {
+    if (typeof warning === 'string' && !warnings.includes(warning)) {
+      warnings.push(warning);
+    }
+  }
 
   // From LighthouseRawData.warnings (collection-level warnings)
   const raw = lighthouseJson as Record<string, unknown>;
@@ -409,8 +445,15 @@ function buildRecommendations(
     const evidence: string[] = [
       `${input.renderBlocking.length} render-blocking resources`,
     ];
+    // Two different Lighthouse numbers exist and they mean different things:
+    // the sum of the per-resource wasted time and the modelled LCP savings.
+    // Report them with their meaning instead of one bare number.
     if (totalWasted > 0) {
-      evidence.push(`Potential savings: ${totalWasted}ms`);
+      evidence.push(`sum of per-resource wasted time: ${totalWasted}ms`);
+    }
+    const lcpSavings = input.features.renderBlocking?.lcpSavingsMs;
+    if (lcpSavings !== undefined) {
+      evidence.push(`Lighthouse modelled LCP savings: ${lcpSavings}ms`);
     }
     recs.push({
       priority: 'high',
@@ -494,6 +537,7 @@ function buildRecommendations(
 export function buildInsights(
   features: FeatureSet,
   lighthouseJson: unknown,
+  runWarnings?: string[],
 ): Insights {
   // 1. Parse Lighthouse insight audits
   const lighthouseInsights = buildLighthouseInsights(lighthouseJson);
@@ -512,16 +556,15 @@ export function buildInsights(
 
   // Lab metrics: measured in the traced run described by runContext.
   const lcpMs = features.lcpBreakdown?.totalLCP;
-  const lcpSource = lcpMs !== undefined
-    ? 'trace'
-    : lighthouseInsights.lcpBreakdown
-      ? 'lighthouse'
-      : undefined;
+  const lcpSource = features.lcpBreakdown?.valueOrigin;
   const fcpMs = features.coreWebVitals?.fcp ?? fcpAuditMs;
   const cls = features.layoutShifts?.cls ?? clsAudit;
 
-  // TBT: use only a measured Lighthouse/IR TBT value. Main-thread busy time is
-  // a different signal and must not be presented as TBT when the real metric is
+  // TBT: the lab value is the trace measurement, the Lighthouse value is
+  // Lighthouse's own audit. They must not overwrite each other.
+  //
+  // Only a measured TBT is reported. Main-thread busy time is a different
+  // signal and must not be presented as TBT when the real metric is
   // unavailable. In headless/automated environments Lighthouse TBT can be
   // wildly inflated (e.g. 151s) due to CDP overhead or browser throttling;
   // treat values above the cap as unavailable instead of substituting busyMs.
@@ -530,13 +573,11 @@ export function buildInsights(
     tbtAudit !== undefined && tbtAudit >= 0 && tbtAudit <= TBT_SANE_MAX
       ? tbtAudit
       : undefined;
+  const labTbt = features.mainThreadBlocking?.tbtMs;
   const tbtMs =
-    tbtAuditSane ??
-    (features.mainThreadBlocking?.tbtMs !== undefined &&
-    features.mainThreadBlocking.tbtMs >= 0 &&
-    features.mainThreadBlocking.tbtMs <= TBT_SANE_MAX
-      ? features.mainThreadBlocking.tbtMs
-      : undefined);
+    labTbt !== undefined && labTbt >= 0 && labTbt <= TBT_SANE_MAX
+      ? labTbt
+      : undefined;
 
   // 5. LCP element
   const lcpElement = buildLcpElement(lighthouseInsights, features);
@@ -548,7 +589,7 @@ export function buildInsights(
   const criticalPath = buildCriticalPath(features, lighthouseInsights);
 
   // 8. Warnings
-  const warnings = buildWarnings(lighthouseJson);
+  const warnings = buildWarnings(lighthouseJson, runWarnings);
 
   // 9. Data-driven recommendations
   const topRecommendations = buildRecommendations({
@@ -599,7 +640,7 @@ export function buildInsights(
         }
       : undefined,
     warnings,
-    dataQuality: buildDataQuality(features, tbtMs),
+    dataQuality: buildDataQuality(features, tbtMs, runWarnings),
     topRecommendations,
   };
 }

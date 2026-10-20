@@ -169,7 +169,7 @@ export async function runRun(
   writeFileSync(featuresFile, await convertToon(features), 'utf-8');
 
   // Build and write insights.toon
-  const insights = buildInsights(features, raw.lighthouse ?? {});
+  const insights = buildInsights(features, raw.lighthouse ?? {}, raw.warnings);
   insightsFile = resolve(runDir, 'insights.toon');
   writeFileSync(insightsFile, await convertToon(insights), 'utf-8');
 
@@ -188,7 +188,7 @@ export async function runRun(
   // Keep the report score aligned with the Lighthouse score already exposed
   // in insights. Without this argument, a warning-only causal graph can
   // downgrade an otherwise green Lighthouse run to MODERATE.
-  const report = buildReport(graph, features, insights.lighthouse.performance);
+  const report = buildReport(graph, features, insights.lighthouse.performance, raw.warnings);
 
   // Write report as .toon (AI consumption) + keep JSON for stdout
   const reportFile = resolve(runDir, 'report.toon');

@@ -196,6 +196,8 @@ export interface NetworkRequestEntry {
   };
   /** CDP monotonic timestamp (seconds) */
   timestamp: number;
+  /** CDP monotonic timestamp (seconds) when the response body finished loading */
+  finishedTimestamp?: number;
   /** UTC wall time (seconds since epoch) */
   wallTime?: number;
   /** Whether the request was served from cache */

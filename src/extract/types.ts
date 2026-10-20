@@ -15,12 +15,23 @@ import { RunContextSchema } from '../normalize/types.js';
 
 export const LCPBreakdownSchema = z.object({
   ttfb: z.number(),
+  /** Where the TTFB was spent: connection setup versus server wait */
+  ttfbParts: z
+    .object({
+      dns: z.number(),
+      connect: z.number(),
+      ssl: z.number(),
+      wait: z.number(),
+    })
+    .optional(),
   resourceLoadDelay: z.number(),
   resourceLoadTime: z.number(),
   elementRenderDelay: z.number(),
   totalLCP: z.number(),
   lcpElementUrl: z.string().optional(),
   lcpResourceType: z.string().optional(),
+  /** Which source the LCP value came from */
+  valueOrigin: z.enum(['performance-api', 'trace', 'lighthouse']).optional(),
   lcpElement: z.object({
     selector: z.string().optional(),
     snippet: z.string().optional(),

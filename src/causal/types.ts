@@ -63,6 +63,15 @@ export const EvidenceSchema = z.object({
   selector: z.string().optional(),
   /** Lighthouse audit ID for cross-referencing */
   lighthouseAuditId: z.string().optional(),
+  /** Where the time of a TTFB measurement was spent */
+  ttfbParts: z
+    .object({
+      dns: z.number(),
+      connect: z.number(),
+      ssl: z.number(),
+      wait: z.number(),
+    })
+    .optional(),
   /** Key metric (name, value, unit) */
   metric: z
     .object({
