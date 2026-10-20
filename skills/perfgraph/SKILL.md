@@ -1,6 +1,6 @@
 ---
 name: perfgraph
-description: Analyze web performance URLs with the PerfGraph CLI and interpret its deterministic reports, causal chains, and prioritized remediation data. Use when a request asks to measure or diagnose loading speed, Core Web Vitals, Lighthouse performance, bottlenecks, or web performance regressions.
+description: Analyze web performance URLs with the PerfGraph CLI and interpret its deterministic reports, causal chains, and prioritized remediation data. Use when the request names perfgraph, or asks to measure or diagnose loading speed, Core Web Vitals, Lighthouse performance, bottlenecks, or web performance regressions.
 metadata:
   short-description: Run PerfGraph CLI and explain performance findings
 ---
