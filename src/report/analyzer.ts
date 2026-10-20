@@ -13,6 +13,7 @@
 import { Graph, alg } from '@dagrejs/graphlib';
 import type { CausalGraph, CausalNode, CausalEdge } from '../causal/types.js';
 import type { FeatureSet } from '../extract/types.js';
+import { assessDataQuality } from '../shared/data-quality.js';
 import type {
   Report,
   ReportMeta,
@@ -135,9 +136,11 @@ function buildChainId(ruleId: string, path: string[]): string {
   return `${ruleId}:${path.length}`;
 }
 
-function buildDataQuality(features?: FeatureSet, runWarnings?: string[]): ReportSummary['dataQuality'] {
-  const warnings: string[] = [];
-
+function buildDataQuality(
+  features?: FeatureSet,
+  runWarnings?: string[],
+  lighthouseTbtMs?: number,
+): ReportSummary['dataQuality'] {
   if (!features || Object.keys(features).length === 0) {
     return {
       status: 'partial',
@@ -145,35 +148,13 @@ function buildDataQuality(features?: FeatureSet, runWarnings?: string[]): Report
     };
   }
 
-  if (features.lcpBreakdown == null) {
-    warnings.push('LCP breakdown is unavailable.');
-  }
-  if (features.layoutShifts == null) {
-    warnings.push('Layout-shift data is unavailable.');
-  }
-  if (features.mainThreadBlocking == null) {
-    warnings.push('Main-thread data is unavailable.');
-  } else if (features.mainThreadBlocking.tbtMs == null) {
-    warnings.push('Measured TBT is unavailable; busyMs is not used as a TBT substitute.');
-  }
-  if (features.renderBlocking?.sourceConflict) {
-    warnings.push(`Network and Lighthouse render-blocking counts differ (${features.renderBlocking.networkResourceCount} vs ${features.renderBlocking.lighthouseResourceCount}); compare source-only resources before attributing impact.`);
-  }
-  const criticalPath = features.criticalPath;
-  if (criticalPath?.pageLifecycleMs != null && criticalPath.aggregateRequestDurationMs > criticalPath.pageLifecycleMs * 2) {
-    warnings.push('Aggregate request duration greatly exceeds page lifecycle; this is parallel work, not equivalent user wait time.');
-  }
-
-  // Collection warnings belong to the report: a run that recorded a warning
-  // did not produce complete data, and saying otherwise hides the gap.
-  for (const warning of runWarnings ?? []) {
-    if (!warnings.includes(warning)) warnings.push(warning);
-  }
-
-  return {
-    status: warnings.length > 0 ? 'partial' : 'complete',
-    warnings,
-  };
+  // The same assessment the insights use, so both artifacts describe the
+  // quality of the run the same way.
+  return assessDataQuality(features, {
+    tbtMs: features.mainThreadBlocking?.tbtMs,
+    lighthouseTbtMs,
+    runWarnings,
+  });
 }
 
 function isRecommendationApplicable(issue: ReportIssue, features?: FeatureSet): boolean {
@@ -219,6 +200,7 @@ export function buildReport(
   features?: FeatureSet,
   lighthousePerformance?: number,
   runWarnings?: string[],
+  lighthouseTbtMs?: number,
 ): Report {
   const g = rebuildGraph(graph);
 
@@ -401,7 +383,7 @@ export function buildReport(
     topIssues,
     lighthousePerformance,
     scoreExplanation,
-    dataQuality: buildDataQuality(features, runWarnings),
+    dataQuality: buildDataQuality(features, runWarnings, lighthouseTbtMs),
   };
 
   // -----------------------------------------------------------------------

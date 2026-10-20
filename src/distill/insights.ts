@@ -8,6 +8,7 @@
  */
 
 import type { FeatureSet } from '../extract/types.js';
+import { assessDataQuality } from '../shared/data-quality.js';
 import type { RunContext } from '../normalize/types.js';
 import { buildLighthouseInsights } from '../normalize/lighthouse-insights.js';
 import type {
@@ -174,49 +175,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function safeNumber(value: unknown): number | undefined {
   return typeof value === 'number' ? value : undefined;
-}
-
-function buildDataQuality(
-  features: FeatureSet,
-  tbtMs: number | undefined,
-  lighthouseTbt: number | undefined,
-  runWarnings?: string[],
-): Insights['dataQuality'] {
-  const warnings: string[] = [];
-  if (features.lcpBreakdown == null) warnings.push('LCP breakdown is unavailable.');
-  if (features.layoutShifts == null) warnings.push('Layout-shift data is unavailable.');
-  if (features.mainThreadBlocking == null) {
-    warnings.push('Main-thread data is unavailable.');
-  } else if (tbtMs == null) {
-    warnings.push('Measured TBT is unavailable; busyMs is not used as a TBT substitute.');
-  }
-  if (features.renderBlocking?.sourceConflict) {
-    warnings.push('Network and Lighthouse render-blocking counts differ; verify both source lists before attributing LCP impact.');
-  }
-  const criticalPath = features.criticalPath;
-  if (criticalPath?.pageLifecycleMs != null && criticalPath.aggregateRequestDurationMs > criticalPath.pageLifecycleMs * 2) {
-    warnings.push('Aggregate request duration exceeds page lifecycle; interpret it as parallel work rather than user wait time.');
-  }
-  // A run that recorded a warning did not produce complete data.
-  for (const warning of runWarnings ?? []) {
-    if (!warnings.includes(warning)) warnings.push(warning);
-  }
-  // The two runs measure the same page under different conditions. A large
-  // gap between their TBT values is worth naming, otherwise the two numbers
-  // look like a contradiction instead of two measurements.
-  const labTbt = features.mainThreadBlocking?.tbtMs;
-  if (labTbt != null && lighthouseTbt != null && labTbt > 0 && lighthouseTbt > 0) {
-    const ratio = Math.max(labTbt, lighthouseTbt) / Math.min(labTbt, lighthouseTbt);
-    if (ratio >= 2) {
-      warnings.push(
-        `Total blocking time differs by ${ratio.toFixed(1)}x between the lab run (${Math.round(labTbt)}ms) and the Lighthouse run (${Math.round(lighthouseTbt)}ms); they are different navigations under different conditions.`,
-      );
-    }
-  }
-  return {
-    status: warnings.length > 0 ? 'partial' : 'complete',
-    warnings,
-  };
 }
 
 /** Navigate to the LHR root — handles { lhr: {...} } wrapper used by LighthouseRawData. */
@@ -491,6 +449,22 @@ function convertFeatureTree(node: {
     );
   }
   return converted;
+}
+
+/** Above this a blocking time is an artifact of the run, not a measurement */
+const LIGHTHOUSE_TBT_SANE_MAX = 60_000; // 60 seconds
+
+/**
+ * The total blocking time Lighthouse reported for its own run.
+ *
+ * A headless run can report an inflated value (151 seconds) because of the
+ * tracing overhead, so a value above a sane bound counts as unavailable.
+ */
+export function extractLighthouseTbtMs(lighthouseJson: unknown): number | undefined {
+  const lhr = getLHRRoot(lighthouseJson);
+  const value = getAuditNumericValue(lhr, 'total-blocking-time');
+  if (value === undefined || !Number.isFinite(value)) return undefined;
+  return value >= 0 && value <= LIGHTHOUSE_TBT_SANE_MAX ? value : undefined;
 }
 
 /**
@@ -840,7 +814,11 @@ export function buildInsights(
         }
       : undefined,
     warnings,
-    dataQuality: buildDataQuality(features, tbtMs, tbtAuditSane, runWarnings),
+    dataQuality: assessDataQuality(features, {
+      tbtMs,
+      lighthouseTbtMs: tbtAuditSane,
+      runWarnings,
+    }),
     topRecommendations,
   };
 }

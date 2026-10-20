@@ -240,4 +240,94 @@ describe('NetworkIR builder', () => {
       expect(result.success).toBe(true);
     });
   });
+  // -----------------------------------------------------------------------
+  // Initiator cycles
+  // -----------------------------------------------------------------------
+  describe('initiator cycles', () => {
+    it('does not recurse forever when a request initiates itself', () => {
+      // Google serves a request whose initiator is its own URL, and the
+      // request appears twice: one copy hangs under the document, the other
+      // under itself. The walk of the critical path followed it until the
+      // stack ran out.
+      const network = {
+        requests: [
+          {
+            url: 'https://www.google.com/',
+            method: 'GET',
+            type: 'Document',
+            request: { headers: {} },
+            response: { status: 200, statusText: 'OK', headers: {}, mimeType: 'text/html', encodedDataLength: 1000 },
+            timestamp: 0,
+            wallTime: 0,
+          },
+          {
+            url: 'https://ogads-pa.clients6.google.com/GetAsyncData',
+            method: 'GET',
+            type: 'XHR',
+            request: { headers: {} },
+            response: { status: 200, statusText: 'OK', headers: {}, mimeType: 'text/plain', encodedDataLength: 100 },
+            timestamp: 0.01,
+            wallTime: 0.01,
+            initiator: {
+              type: 'script',
+              url: 'https://ogads-pa.clients6.google.com/GetAsyncData',
+            },
+          },
+          {
+            url: 'https://ogads-pa.clients6.google.com/GetAsyncData',
+            method: 'GET',
+            type: 'XHR',
+            request: { headers: {} },
+            response: { status: 200, statusText: 'OK', headers: {}, mimeType: 'text/plain', encodedDataLength: 100 },
+            timestamp: 0.012,
+            wallTime: 0.012,
+          },
+        ],
+      } as unknown as NetworkRawData;
+
+      const ir = buildNetworkIR(network, anchor);
+      expect(ir.summary.criticalPath.tree.url).toBe('https://www.google.com/');
+      expect(ir.summary.criticalPath.depth).toBeGreaterThanOrEqual(1);
+    });
+
+    it('does not recurse forever when two requests initiate each other', () => {
+      const network = {
+        requests: [
+          {
+            url: 'https://example.com/',
+            method: 'GET',
+            type: 'Document',
+            request: { headers: {} },
+            response: { status: 200, statusText: 'OK', headers: {}, mimeType: 'text/html', encodedDataLength: 1000 },
+            timestamp: 0,
+            wallTime: 0,
+          },
+          {
+            url: 'https://example.com/a',
+            method: 'GET',
+            type: 'XHR',
+            request: { headers: {} },
+            response: { status: 200, statusText: 'OK', headers: {}, mimeType: 'text/plain', encodedDataLength: 100 },
+            timestamp: 0.01,
+            wallTime: 0.01,
+            initiator: { type: 'script', url: 'https://example.com/b' },
+          },
+          {
+            url: 'https://example.com/b',
+            method: 'GET',
+            type: 'XHR',
+            request: { headers: {} },
+            response: { status: 200, statusText: 'OK', headers: {}, mimeType: 'text/plain', encodedDataLength: 100 },
+            timestamp: 0.02,
+            wallTime: 0.02,
+            initiator: { type: 'script', url: 'https://example.com/a' },
+          },
+        ],
+      } as unknown as NetworkRawData;
+
+      const ir = buildNetworkIR(network, anchor);
+      expect(ir.summary.criticalPath.tree.url).toBe('https://example.com/');
+    });
+  });
+
 });

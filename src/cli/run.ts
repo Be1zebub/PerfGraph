@@ -19,7 +19,7 @@ import { loadRunDir } from '../shared/fs-utils.js';
 import { normalize } from '../normalize/index.js';
 import type { IRBundle } from '../normalize/types.js';
 import { extract } from '../extract/index.js';
-import { buildInsights, collectRunWarnings, extractLighthouseScores } from '../distill/insights.js';
+import { buildInsights, collectRunWarnings, extractLighthouseScores, extractLighthouseTbtMs } from '../distill/insights.js';
 import {
   buildNetworkSummary,
   buildLighthouseSummary,
@@ -185,7 +185,14 @@ export async function runRun(
   // did not finish loading or was redirected. They belong in the report, not
   // only in the insights.
   const runWarnings = collectRunWarnings(raw.lighthouse ?? {}, raw.warnings);
-  const report = buildReport(graph, features, lighthousePerformance, runWarnings);
+  const lighthouseTbtMs = extractLighthouseTbtMs(raw.lighthouse ?? {});
+  const report = buildReport(
+    graph,
+    features,
+    lighthousePerformance,
+    runWarnings,
+    lighthouseTbtMs,
+  );
 
   // -----------------------------------------------------------------------
   // 6. Insights
