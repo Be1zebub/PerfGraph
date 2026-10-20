@@ -55,7 +55,10 @@ Limitations: <warnings, missing collectors, confidence caveats>.
 - Two LCP numbers may appear: the PerfGraph lab value from the traced run and
   the Lighthouse value from its own throttled run. Report each with its source
   instead of merging them. `insights.metrics` is the lab run, `insights.lighthouse`
-  is the Lighthouse run.
+  is the Lighthouse run, and `insights.lighthouse.fetchedAt` says when it ran.
+  When the two runs disagree on the blocking time, `dataQuality` says so by
+  how much — that is two measurements under different conditions, not a
+  contradiction.
 
 ## LCP element and resource
 
