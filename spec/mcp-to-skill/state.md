@@ -32,24 +32,22 @@
 | raw data читать только для deep dive | Trace/network/Lighthouse могут быть большими |
 | Не менять алгоритмы анализа в рамках миграции | Миграция касается agent UX и транспорта |
 
-## Открытые вопросы для plan phase
+## Решения по открытым вопросам
 
-- Где именно будет опубликован skill: отдельная директория репозитория,
-  `.agents/skills/` или отдельный пакет skills.
-- Нужно ли поддерживать только установленный бинарник `perfgraph` или также
-  локальный `node dist/index.js` fallback.
-- Должен ли skill рекомендовать `--runs 1` явно или полагаться на default.
-- Нужен ли отдельный CLI subcommand для чтения/суммаризации существующего run
-  directory, либо достаточно инструкций skill.
-- Какие golden/local URLs доступны для сетевого smoke test в CI.
-- Нужен ли отдельный machine-readable `interpretation` section в report, либо
-  достаточно skill-level правил поверх существующих `summary/chains`.
+| Вопрос | Решение |
+| --- | --- |
+| Где публикуется skill | `skills/perfgraph/` в репозитории, входит в npm package через `files: ["skills/"]` |
+| Установленный бинарник или локальный fallback | Оба: skill предлагает `perfgraph`, при отсутствии — `node dist/index.js` |
+| Явный `--runs 1` | Не рекомендуется явно: default = 1, skill описывает `--runs 3` для вариативности |
+| Отдельный subcommand для чтения run directory | Не нужен: достаточно инструкций skill по чтению артефактов |
+| Golden URL для сетевого smoke test в CI | Не используется: CI выполняет typecheck, tests и build без сети |
+| Machine-readable `interpretation` section в report | Не нужен: правила интерпретации живут в skill и в `references/interpretation.md` |
 
 ## Следующий шаг
 
-Реализация issue 1–6 завершена. Для будущих изменений остаётся только
-опциональная валидация на доступном golden URL и возможное решение, нужен ли
-отдельный machine-readable interpretation section в report.
+Реализация issue 1–6 завершена и закоммичена. Остаточные задачи вынесены за
+рамки миграции: trace overlap как optional evidence source и machine-readable
+interpretation section, если это потребуется позже.
 
 ## Фактический результат
 
