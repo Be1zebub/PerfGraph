@@ -235,6 +235,21 @@ function findMainThreadKey(events: TraceRawData['events']): string {
 }
 
 /**
+ * Normalize a trace category for reporting.
+ *
+ * Chrome writes the same event under several category names, the extra ones
+ * prefixed with `disabled-by-default-`. Keeping the prefix made the busiest
+ * category of a page read as `disabled-by-default-devtools.timeline`, which
+ * says nothing.
+ */
+function normalizeCategory(cat: string): string {
+  const first = cat.split(',')[0] ?? 'unknown';
+  return first.startsWith('disabled-by-default-')
+    ? first.slice('disabled-by-default-'.length)
+    : first;
+}
+
+/**
  * Build TraceSummary from all trace events.
  *
  * - totalDuration: difference between last and first event timestamps
@@ -283,7 +298,7 @@ function buildTraceSummary(
   // Count events per top-level category
   const categories: Record<string, number> = {};
   for (const ev of events) {
-    const topCat = ev.cat.split(',')[0] ?? 'unknown';
+    const topCat = normalizeCategory(ev.cat);
     categories[topCat] = (categories[topCat] ?? 0) + 1;
   }
 
@@ -327,7 +342,7 @@ function buildTraceSummary(
     }
 
     if (!nested) {
-      const topCat = ev.cat.split(',')[0] ?? 'unknown';
+      const topCat = normalizeCategory(ev.cat);
       byCategory[topCat] = (byCategory[topCat] ?? 0) + durUs / 1000;
       mainThreadTotalMs += durUs / 1000;
     }

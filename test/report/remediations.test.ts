@@ -138,4 +138,15 @@ describe('getRemediation', () => {
     expect(text).toBeTruthy();
     expect(text.length).toBeGreaterThan(10);
   });
+
+  it('does not call a healthy LCP high', () => {
+    const text = getRemediation('increased-lcp', { value: 1024 });
+    expect(text).toContain('within the 2500ms threshold');
+    expect(text).not.toContain('LCP is high');
+  });
+
+  it('still calls an exceeded LCP high', () => {
+    const text = getRemediation('increased-lcp', { value: 3200 });
+    expect(text).toContain('LCP is high (3200ms)');
+  });
 });

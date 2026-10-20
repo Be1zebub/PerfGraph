@@ -38,6 +38,9 @@ export interface RemediationContext {
 // Remediation lookup
 // ---------------------------------------------------------------------------
 
+/** LCP threshold in ms — above it the LCP is a finding */
+const LCP_WARN_MS = 2_500;
+
 type RemediationKey = string; // node ID or "type:ruleId" pattern
 
 const REMEDIATIONS: Record<RemediationKey, string> = {
@@ -248,6 +251,12 @@ export function getRemediation(
 
     // Increased LCP with value
     if (issueId === 'increased-lcp' && context.value != null) {
+      // The node is only a finding when the LCP exceeds the threshold. Below
+      // it, the chain is about the upstream delay, and saying "LCP is high"
+      // would contradict the node it belongs to.
+      if (context.value <= LCP_WARN_MS) {
+        return `LCP is ${Math.round(context.value)}ms, within the ${LCP_WARN_MS}ms threshold. The finding of this chain is the upstream delay, not the LCP itself.`;
+      }
       const url = context.lcpElementUrl ?? '';
       // An inline resource is already in the document: there is nothing to
       // download, preload or re-encode.
