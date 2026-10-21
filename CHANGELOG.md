@@ -54,6 +54,12 @@ the only runtime interface, and the agent-facing layer is a skill.
   and Total Blocking Time counts the main thread only
 - the run environment and the collection warnings reach the report
 - the report and the insights judge the quality of the data the same way
+- one finding is counted once: the impact node of a chain states the
+  consequence and no longer raises the severity of the verdict
+- a Lighthouse audit is a warning at most — it is measured in another run,
+  and the measured signals of the run decide how bad the page is
+- the regression check looks at the unit, so a count of bytes is not read as a
+  delay in milliseconds
 - the render-blocking resources carry their priority and their initiator, so a
   stylesheet a script injected as a non-blocking preload can be told apart
   from one that really blocks the render
