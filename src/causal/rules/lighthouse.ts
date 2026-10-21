@@ -28,12 +28,6 @@ function formatValue(value: number, unit: 'ms' | 'bytes' | 'count' | 'score'): s
   return String(Math.round(value));
 }
 
-/** The severity of a finding, from its own thresholds. */
-function severityOf(value: number, warnAt: number, critAt: number): 'critical' | 'warning' | 'info' {
-  if (value >= critAt) return 'critical';
-  if (value >= warnAt) return 'warning';
-  return 'info';
-}
 
 // ---------------------------------------------------------------------------
 // Rule: Lighthouse finding → measured cost
@@ -54,8 +48,12 @@ export const lighthouseFindingsChain = {
     const edges: CausalEdge[] = [];
 
     for (const finding of findings) {
-      const severity = severityOf(finding.value, finding.warnAt, finding.critAt);
-      if (severity === 'info') continue;
+      // A Lighthouse audit is an optimization opportunity measured in another
+      // run, not a regression of this page. It is a warning at most: the
+      // measured signals of the run itself decide how bad the page is. A
+      // finding below its threshold is not reported at all.
+      if (finding.value < finding.warnAt) continue;
+      const severity = 'warning' as const;
 
       const evidence: Evidence = {
         urls: finding.sources,

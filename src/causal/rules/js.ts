@@ -103,7 +103,7 @@ export const tbtInpChain = {
       });
       nodes.push({
         id: 'delayed-inp-tbt',
-        label: 'Possible INP delay',
+        label: 'Possible INP delay (blocking time)',
         type: 'impact',
         severity: 'warning',
       });
@@ -199,7 +199,7 @@ export const jsHotspotsChain = {
     if (js.maxBlockingDuration > 50) {
       nodes.push({
         id: 'delayed-inp-hotspots',
-        label: 'Possible INP delay',
+        label: 'Possible INP delay (long tasks)',
         type: 'impact',
         severity: 'warning',
       });

@@ -67,13 +67,19 @@ export function computeScore(
   graph: CausalGraph,
   lighthousePerformance?: number,
 ): { score: ReportScore; explanation?: string } {
-  let criticalCount = 0;
-
-  for (const node of graph.nodes) {
-    if (node.severity === 'critical') {
-      criticalCount++;
-    }
-  }
+  // The impact node of a chain restates the consequence of the finding above
+  // it. Counting it would let one finding justify a worse verdict twice — a
+  // single Lighthouse audit on one asset was enough to turn a page with green
+  // Core Web Vitals into "poor". An impact only counts when nothing else in
+  // the graph carries the finding.
+  const criticalFindings = graph.nodes.filter(
+    (node) => node.severity === 'critical' && node.type !== 'impact',
+  );
+  const criticalImpacts = graph.nodes.filter(
+    (node) => node.severity === 'critical' && node.type === 'impact',
+  );
+  const criticalCount =
+    criticalFindings.length > 0 ? criticalFindings.length : criticalImpacts.length;
 
   // When Lighthouse data is available, consider overriding the heuristic
   if (lighthousePerformance !== undefined) {

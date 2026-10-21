@@ -323,11 +323,17 @@ export function buildReport(
       node.value == null || node.threshold == null || node.value > node.threshold;
     const severity = exceedsThreshold ? (node.severity ?? 'info') : 'info';
 
+    // The impact node of a chain restates the consequence of the finding
+    // above it. It belongs to the chain, not to the list of findings, so it
+    // does not count as one and does not raise the severity of the report.
+    const isImpact = node.type === 'impact';
+    const issueSeverity = isImpact ? 'info' : severity;
+
     return {
       id: node.id,
       label: node.label,
       type: node.type,
-      severity,
+      severity: issueSeverity,
       value: node.value,
       unit: node.unit,
       threshold: node.threshold,
