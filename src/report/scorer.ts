@@ -21,20 +21,14 @@ import type { ReportScore } from './types.js';
  * as opposed to a rule-triggered flag. Used to decide whether Lighthouse
  * data should override the heuristic score.
  *
- * A genuine regression is:
- *   - Any node (metric or impact) with a value > 4000 (e.g. LCP > 4 s)
- *   - Any ms-valued node with a value > 2500 (e.g. TTFB > 2.5 s)
+ * A regression is a delay in milliseconds: an LCP or TBT past the Core Web
+ * Vitals threshold. A count of bytes is not a delay — an image that could be
+ * 200 kB smaller did not make the page slower.
  */
 function isGenuineRegression(node: CausalNode): boolean {
   if (node.value == null) return false;
-
-  // Any value above 4000 is a clear regression regardless of semantics
-  if (node.value > 4000) return true;
-
-  // ms-valued metrics above 2500 are "poor" by Google thresholds
-  if (node.unit === 'ms' && node.value > 2500) return true;
-
-  return false;
+  if (node.unit !== 'ms') return false;
+  return node.value > 2500;
 }
 
 function hasGenuineRegression(nodes: CausalNode[]): boolean {
