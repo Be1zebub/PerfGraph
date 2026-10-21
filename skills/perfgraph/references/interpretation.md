@@ -131,6 +131,35 @@ completes, but the numbers describe the state at the first paint, not a
 settled page. Say so when the page keeps requesting, and do not read a long
 `aggregateRequestDurationMs` as waiting time.
 
+## Score and issues
+
+`summary.score` is `good` / `moderate` / `poor`. It follows the findings of
+the run, and a Lighthouse score can promote it — so a page with green Core
+Web Vitals can be `good` even with warnings. Read `scoreExplanation` before
+repeating the verdict.
+
+`issues[]` lists the findings **and** the consequence each of them has. The
+consequence node of a chain is the impact — it states what the finding costs
+the visitor, it is not a second finding. When a chain shows a metric and its
+impact, that is one problem, and the report counts it once.
+
+`insights.lighthouse.failedAudits` holds the audits that did not pass. They
+are measured in Lighthouse's own run, so they are optimization opportunities
+rather than a regression of the run you are reading.
+
+`insights.criticalPath.documentChain` appears when the browser loaded more
+than one document. That means it navigated away from a page it had already
+received — a redirect or a client-side route change.
+
+- `wastedServerMs` is the server time spent on the response nobody used.
+- `contentAtMs` is when the content the visitor finally saw arrived, relative
+  to the navigation start.
+
+A single run cannot separate the cost of the chain from the cost of the load
+itself, so report the chain as a fact with the wasted server time, not as a
+measured delay. Do not describe it as "the server is slow" when the server
+wait is a small part of it.
+
 ## Document chain
 
 `insights.criticalPath.documentChain` appears when the browser loaded more
